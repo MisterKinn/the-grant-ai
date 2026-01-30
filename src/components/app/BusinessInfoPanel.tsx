@@ -396,32 +396,33 @@ const extractBusinessInfoFromContent = (
 
     // ========== 2-3 정부지원사업비 집행계획 표에서 합계 추출 ==========
     // 마크다운 표의 합계 행: | **합 계** | | **25,000,000** | **2,500,000** | **0** | **27,500,000** |
-    const budgetTotalRegex = /\|\s*\*?\*?합\s*계\*?\*?\s*\|\s*[^|]*\|\s*\*?\*?([0-9,]+)\*?\*?\s*\|\s*\*?\*?([0-9,]+)\*?\*?\s*\|\s*\*?\*?([0-9,]+)\*?\*?\s*\|\s*\*?\*?([0-9,]+)\*?\*?\s*\|/i;
+    const budgetTotalRegex =
+        /\|\s*\*?\*?합\s*계\*?\*?\s*\|\s*[^|]*\|\s*\*?\*?([0-9,]+)\*?\*?\s*\|\s*\*?\*?([0-9,]+)\*?\*?\s*\|\s*\*?\*?([0-9,]+)\*?\*?\s*\|\s*\*?\*?([0-9,]+)\*?\*?\s*\|/i;
     const budgetMatch = cleanContent.match(budgetTotalRegex);
-    
+
     if (budgetMatch) {
-        const govAmount = budgetMatch[1].replace(/,/g, '');
-        const cashAmount = budgetMatch[2].replace(/,/g, '');
-        const kindAmount = budgetMatch[3].replace(/,/g, '');
-        const totalAmount = budgetMatch[4].replace(/,/g, '');
-        
+        const govAmount = budgetMatch[1].replace(/,/g, "");
+        const cashAmount = budgetMatch[2].replace(/,/g, "");
+        const kindAmount = budgetMatch[3].replace(/,/g, "");
+        const totalAmount = budgetMatch[4].replace(/,/g, "");
+
         // 숫자로 변환해서 포맷팅
         const formatAmount = (num: string) => {
             const n = parseInt(num, 10);
             if (isNaN(n)) return "0";
-            return n.toLocaleString('ko-KR');
+            return n.toLocaleString("ko-KR");
         };
-        
+
         extracted.budget_gov = formatAmount(govAmount);
         extracted.budget_self_cash = formatAmount(cashAmount);
         extracted.budget_self_kind = formatAmount(kindAmount);
         extracted.budget_total = formatAmount(totalAmount);
-        
+
         console.log("[extractBusinessInfo] 2-3 예산 추출:", {
             budget_gov: extracted.budget_gov,
             budget_self_cash: extracted.budget_self_cash,
             budget_self_kind: extracted.budget_self_kind,
-            budget_total: extracted.budget_total
+            budget_total: extracted.budget_total,
         });
     } else {
         // 기본값 (추출 실패 시)
@@ -767,10 +768,12 @@ export const BusinessInfoPanel = forwardRef<
                                 updated.budget_gov = extracted.budget_gov;
                             }
                             if (extracted.budget_self_cash) {
-                                updated.budget_self_cash = extracted.budget_self_cash;
+                                updated.budget_self_cash =
+                                    extracted.budget_self_cash;
                             }
                             if (extracted.budget_self_kind) {
-                                updated.budget_self_kind = extracted.budget_self_kind;
+                                updated.budget_self_kind =
+                                    extracted.budget_self_kind;
                             }
                             if (extracted.budget_total) {
                                 updated.budget_total = extracted.budget_total;
