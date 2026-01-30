@@ -273,18 +273,20 @@ const BUDGET_TABLE_2026_EARLY = `### 2-3. 정부지원사업비 집행계획
 | **합 계** | | **[총액]** | **[총액]** | **[총액]** | **[총액]** |`;
 
 // grantType에 따라 적절한 프롬프트 선택
-const getSystemPromptForGrantType = (grantType: string | null | undefined): string => {
+const getSystemPromptForGrantType = (
+    grantType: string | null | undefined,
+): string => {
     // 2025 예비창업패키지 (1단계/2단계 분리)
     if (grantType === "PRE_STARTUP") {
         return SYSTEM_PROMPT.replace(
             /### 2-3\. 정부지원사업비 집행계획[\s\S]*?\| \*\*합 계\*\* \|[^\n]*\n/,
-            BUDGET_TABLE_2025_PRE + "\n\n"
+            BUDGET_TABLE_2025_PRE + "\n\n",
         );
     }
     // 2026 초기창업패키지 또는 기본값 (단일 표)
     return SYSTEM_PROMPT.replace(
         /### 2-3\. 정부지원사업비 집행계획[\s\S]*?\| \*\*합 계\*\* \|[^\n]*\n/,
-        BUDGET_TABLE_2026_EARLY + "\n\n"
+        BUDGET_TABLE_2026_EARLY + "\n\n",
     );
 };
 
@@ -665,7 +667,10 @@ serve(async (req) => {
             ? CUSTOM_TEMPLATE_PROMPT
             : getSystemPromptForGrantType(grantType);
 
-        console.log("[chat] Using prompt for grantType:", grantType || "default (EARLY_STARTUP)");
+        console.log(
+            "[chat] Using prompt for grantType:",
+            grantType || "default (EARLY_STARTUP)",
+        );
 
         // Build context with uploaded file content if available
         let contextSection = "";
