@@ -41,7 +41,9 @@ const Navbar = () => {
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: 'global' });
+    localStorage.clear();
+    window.location.href = '/';
   };
 
   return (

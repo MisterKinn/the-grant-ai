@@ -65,7 +65,10 @@ export function useAuth() {
   }, []);
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: 'global' });
+    // 로컬 스토리지 정리 후 홈 페이지로 리다이렉트
+    localStorage.clear();
+    window.location.href = '/';
   };
 
   const refreshProfile = async () => {
