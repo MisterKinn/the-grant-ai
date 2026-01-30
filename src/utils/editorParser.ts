@@ -34,8 +34,7 @@ export interface ProjectData {
 
     team_competency?: string;
 
-    budget_p1_total_amount?: string;
-    budget_p2_total_amount?: string;
+    budget_total_amount?: string;
 
     // 2026 초기창업패키지 전용 예산 필드
     budget_gov?: string;
@@ -166,8 +165,7 @@ const initializeAllKeys = (data: ProjectData): void => {
         "scale_market",
         "scale_esg",
         "team_competency",
-        "budget_p1_total_amount",
-        "budget_p2_total_amount",
+        "budget_total_amount",
         // 2026 초기창업패키지 전용 예산 필드
         "budget_gov",
         "budget_self_cash",
@@ -199,35 +197,21 @@ const initializeAllKeys = (data: ProjectData): void => {
         data[`partner_${i}_date`] = "";
     }
 
-    // 예산(1단계, 2단계) - 1단계와 2단계 항목이 다름
-    // 1단계: 재료비, 인건비, 외주용역비, 광고선전비, 창업활동비, 기타
-    // 2단계: 재료비, 인건비, 외주용역비, 지급수수료, 무형자산취득비, 광고선전비, 창업활동비, 기타
-    const budget_p1_categories = [
+    // 예산 - 단일 표 형식 (2026 초기창업패키지)
+    // 비목: 재료비, 인건비, 외주용역비, 광고선전비, 지급수수료, 창업활동비, 기타
+    const budget_categories = [
         "material",
         "personnel",
         "outsourcing",
         "advertising",
-        "activity",
-        "etc",
-    ];
-    const budget_p2_categories = [
-        "material",
-        "personnel",
-        "outsourcing",
-        "fee",
-        "intangible",
-        "advertising",
+        "commission",
         "activity",
         "etc",
     ];
 
-    for (const cat of budget_p1_categories) {
-        data[`budget_p1_${cat}_basis`] = "";
-        data[`budget_p1_${cat}_amount`] = "";
-    }
-    for (const cat of budget_p2_categories) {
-        data[`budget_p2_${cat}_basis`] = "";
-        data[`budget_p2_${cat}_amount`] = "";
+    for (const cat of budget_categories) {
+        data[`budget_${cat}_basis`] = "";
+        data[`budget_${cat}_amount`] = "";
     }
 
     // 일정
@@ -331,16 +315,14 @@ const parseBudgetTable = (table: any, data: ProjectData, prefix: string) => {
     if (!table) return;
     const rows = table.content || [];
 
-    // 1단계/2단계 다른 매핑 사용
+    // 단일 표 형식 매핑 (2026 초기창업패키지)
     const categoryMap: Record<string, string> = {
         재료: "material",
         인건: "personnel",
         외주: "outsourcing",
         용역: "outsourcing",
-        지급수수료: "fee",
-        수수료: "fee",
-        무형자산: "intangible",
-        무형: "intangible",
+        지급수수료: "commission",
+        수수료: "commission",
         광고: "advertising",
         마케팅: "advertising",
         홍보: "advertising",
@@ -510,8 +492,6 @@ const SECTION_PATTERNS: {
 
 // 추가 Terminator 패턴 (표 시작 신호)
 const EXTRA_TERMINATORS = [
-    /<1단계/,
-    /<2단계/,
     /정부지원사업비/,
     /집행계획/,
     /사업추진\s*일정/,
@@ -649,17 +629,19 @@ export const parseEditorContent = (
     if (scheduleTables[1])
         parseScheduleTable(scheduleTables[1], data, "overall_schedule");
 
-    // 예산 테이블
+    // 예산 테이블 - 단일 표 형식 (2026 초기창업패키지)
     const budgetTables = tables.filter((t: any) => {
         const text = extractNodeText(t);
         return (
             text.includes("비목") ||
             text.includes("산출근거") ||
-            text.includes("산 출 근 거")
+            text.includes("산 출 근 거") ||
+            text.includes("집행 계획") ||
+            text.includes("집행계획")
         );
     });
-    if (budgetTables[0]) parseBudgetTable(budgetTables[0], data, "budget_p1");
-    if (budgetTables[1]) parseBudgetTable(budgetTables[1], data, "budget_p2");
+    // 첫 번째 예산 테이블만 사용 (단일 표)
+    if (budgetTables[0]) parseBudgetTable(budgetTables[0], data, "budget");
 
     // 팀 테이블 - 구분/직위/담당업무/보유역량/구성상태 구조
     const teamTable = tables.find((t: any) => {
@@ -753,8 +735,7 @@ export const parseEditorContent = (
         scale_bm: data["scale_bm"]?.substring(0, 80) + "...",
     });
     console.log("📊 Budget totals:", {
-        p1: data["budget_p1_total_amount"],
-        p2: data["budget_p2_total_amount"],
+        total: data["budget_total_amount"],
     });
 
     return data;

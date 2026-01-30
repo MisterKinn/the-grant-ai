@@ -180,10 +180,13 @@ const replaceCheckboxes = (content: string, data: ProjectData): string => {
     for (const option of supportFieldOptions) {
         const isSelected = selectedSupportField === option;
         const checkChar = isSelected ? "☑ " : "☐ ";
-        
+
         // 빈 run 태그 바로 앞의 옵션 텍스트를 찾아서 체크박스 문자 추가
         // 패턴: <hp:t>옵션</hp:t> → <hp:t>☑ 옵션</hp:t> 또는 <hp:t>☐ 옵션</hp:t>
-        const pattern = new RegExp(`(<${prefix}:t>)(${escapeRegExp(option)})(</${prefix}:t>)`, "g");
+        const pattern = new RegExp(
+            `(<${prefix}:t>)(${escapeRegExp(option)})(</${prefix}:t>)`,
+            "g",
+        );
         result = result.replace(pattern, `$1${checkChar}$2$3`);
     }
 
@@ -193,7 +196,10 @@ const replaceCheckboxes = (content: string, data: ProjectData): string => {
         { text: "전기·전자", variations: ["전기·전자", "전기.전자"] },
         { text: "정보·통신", variations: ["정보·통신", "정보.통신"] },
         { text: "화공·섬유", variations: ["화공·섬유", "화공.섬유"] },
-        { text: "바이오·의료·생명", variations: ["바이오·의료·생명", "바이오.의료.생명"] },
+        {
+            text: "바이오·의료·생명",
+            variations: ["바이오·의료·생명", "바이오.의료.생명"],
+        },
         { text: "에너지·자원", variations: ["에너지·자원", "에너지.자원"] },
         { text: "공예·디자인", variations: ["공예·디자인", "공예.디자인"] },
     ];
@@ -202,24 +208,37 @@ const replaceCheckboxes = (content: string, data: ProjectData): string => {
 
     for (const { text, variations } of techFieldOptions) {
         const normalizedText = text.replace(/·/g, ".");
-        const isSelected = normalizedSelectedTech === normalizedText || selectedTechField === text;
+        const isSelected =
+            normalizedSelectedTech === normalizedText ||
+            selectedTechField === text;
         const checkChar = isSelected ? "☑ " : "☐ ";
-        
+
         for (const variant of variations) {
-            const pattern = new RegExp(`(<${prefix}:t>)(${escapeRegExp(variant)})(</${prefix}:t>)`, "g");
+            const pattern = new RegExp(
+                `(<${prefix}:t>)(${escapeRegExp(variant)})(</${prefix}:t>)`,
+                "g",
+            );
             result = result.replace(pattern, `$1${checkChar}$2$3`);
         }
     }
 
     // 지방우대 지역 체크박스
-    const regionOptions = ["특별지원 지역", "우대지원 지역", "일반지역", "지방우대 비해당 지역"];
+    const regionOptions = [
+        "특별지원 지역",
+        "우대지원 지역",
+        "일반지역",
+        "지방우대 비해당 지역",
+    ];
     const selectedRegion = data["region_type"] || "";
 
     for (const option of regionOptions) {
         const isSelected = selectedRegion === option;
         const checkChar = isSelected ? "☑ " : "☐ ";
-        
-        const pattern = new RegExp(`(<${prefix}:t>)(${escapeRegExp(option)})(</${prefix}:t>)`, "g");
+
+        const pattern = new RegExp(
+            `(<${prefix}:t>)(${escapeRegExp(option)})(</${prefix}:t>)`,
+            "g",
+        );
         result = result.replace(pattern, `$1${checkChar}$2$3`);
     }
 
@@ -228,7 +247,7 @@ const replaceCheckboxes = (content: string, data: ProjectData): string => {
 
 // 정규식 특수문자 이스케이프
 const escapeRegExp = (str: string): string => {
-    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 };
 
 /**
@@ -238,18 +257,20 @@ const escapeRegExp = (str: string): string => {
  * - 일반지역: 정부 75%, 자기부담 25% (현금 10%, 현물 15%)
  * - 지방우대 비해당 지역: 정부 70%, 자기부담 30% (현금 10%, 현물 20%)
  */
-const getRegionRatios = (regionType: string): { govRatio: number; cashRatio: number; physicalRatio: number } => {
+const getRegionRatios = (
+    regionType: string,
+): { govRatio: number; cashRatio: number; physicalRatio: number } => {
     switch (regionType) {
         case "특별지원 지역":
-            return { govRatio: 0.90, cashRatio: 0.10, physicalRatio: 0 };
+            return { govRatio: 0.9, cashRatio: 0.1, physicalRatio: 0 };
         case "우대지원 지역":
-            return { govRatio: 0.80, cashRatio: 0.10, physicalRatio: 0.10 };
+            return { govRatio: 0.8, cashRatio: 0.1, physicalRatio: 0.1 };
         case "일반지역":
-            return { govRatio: 0.75, cashRatio: 0.10, physicalRatio: 0.15 };
+            return { govRatio: 0.75, cashRatio: 0.1, physicalRatio: 0.15 };
         case "지방우대 비해당 지역":
-            return { govRatio: 0.70, cashRatio: 0.10, physicalRatio: 0.20 };
+            return { govRatio: 0.7, cashRatio: 0.1, physicalRatio: 0.2 };
         default:
-            return { govRatio: 0.75, cashRatio: 0.10, physicalRatio: 0.15 }; // 기본값: 일반지역
+            return { govRatio: 0.75, cashRatio: 0.1, physicalRatio: 0.15 }; // 기본값: 일반지역
     }
 };
 
@@ -269,21 +290,24 @@ const formatThousandWon = (amount: number): string => {
 const calculateBudgetData = (data: ProjectData): ProjectData => {
     const regionType = data["region_type"] || "일반지역";
     const { govRatio, cashRatio, physicalRatio } = getRegionRatios(regionType);
-    
+
     // 정부지원사업비 (사용자 입력값 또는 기본 1억원)
     const govAmount = Number(data["budget_gov_amount"]) || 100000000;
-    
+
     // 총사업비 계산 (정부지원사업비 / 정부비율)
     const totalProjectAmount = Math.round(govAmount / govRatio);
     const selfCashAmount = Math.round(totalProjectAmount * cashRatio);
     const selfPhysicalAmount = Math.round(totalProjectAmount * physicalRatio);
-    
+
     // 일반현황 표의 사업비 (백만원 단위)
     data["budget_gov"] = `${Math.round(govAmount / 1000000)}백만원`;
     data["budget_self_cash"] = `${Math.round(selfCashAmount / 1000000)}백만원`;
-    data["budget_self_kind"] = selfPhysicalAmount > 0 ? `${Math.round(selfPhysicalAmount / 1000000)}백만원` : "0";
+    data["budget_self_kind"] =
+        selfPhysicalAmount > 0
+            ? `${Math.round(selfPhysicalAmount / 1000000)}백만원`
+            : "0";
     data["budget_total"] = `${Math.round(totalProjectAmount / 1000000)}백만원`;
-    
+
     // 사업비 집행 계획 표 - BusinessInfo에서 비목별 금액 가져오기
     const budgetItems = {
         material: Number(data["budget_material_amount"]) || 3000000,
@@ -294,31 +318,32 @@ const calculateBudgetData = (data: ProjectData): ProjectData => {
         activity: Number(data["budget_activity_amount"]) || 7000000,
         etc: Number(data["budget_etc_amount"]) || 5000000,
     };
-    
+
     // 각 비목에 대해 자기부담(현금/현물) 계산
     let totalGovSum = 0;
     let totalCashSum = 0;
     let totalPhysicalSum = 0;
     let totalAllSum = 0;
-    
+
     for (const [key, govBudget] of Object.entries(budgetItems)) {
         // 해당 비목의 총 금액 = 정부지원 / 정부비율
         const totalItemAmount = Math.round(govBudget / govRatio);
         const cashAmount = Math.round(totalItemAmount * cashRatio);
         const physicalAmount = Math.round(totalItemAmount * physicalRatio);
         const totalAmount = govBudget + cashAmount + physicalAmount;
-        
+
         totalGovSum += govBudget;
         totalCashSum += cashAmount;
         totalPhysicalSum += physicalAmount;
         totalAllSum += totalAmount;
-        
+
         // 천원 단위로 변환
         data[`budget_${key}_amount`] = formatThousandWon(govBudget);
         data[`cash_${key}_amount`] = formatThousandWon(cashAmount);
-        data[`physical_${key}_amount`] = physicalAmount > 0 ? formatThousandWon(physicalAmount) : "-";
+        data[`physical_${key}_amount`] =
+            physicalAmount > 0 ? formatThousandWon(physicalAmount) : "-";
         data[`total_${key}_amount`] = formatThousandWon(totalAmount);
-        
+
         // 산출 근거 (BusinessInfo에서 가져오기)
         const basisKey = `budget_${key}_basis`;
         if (!data[basisKey] || data[basisKey] === "") {
@@ -335,16 +360,18 @@ const calculateBudgetData = (data: ProjectData): ProjectData => {
             data[basisKey] = defaultBasis[key] || "";
         }
     }
-    
+
     // physical_budget_material_amount (템플릿의 오타 대응)
-    data["physical_budget_material_amount"] = data["physical_material_amount"] || "-";
-    
+    data["physical_budget_material_amount"] =
+        data["physical_material_amount"] || "-";
+
     // 합계 행
     data["total_grant"] = formatThousandWon(totalGovSum);
     data["total_cash"] = formatThousandWon(totalCashSum);
-    data["total_physical"] = totalPhysicalSum > 0 ? formatThousandWon(totalPhysicalSum) : "-";
+    data["total_physical"] =
+        totalPhysicalSum > 0 ? formatThousandWon(totalPhysicalSum) : "-";
     data["total_for_all"] = formatThousandWon(totalAllSum);
-    
+
     return data;
 };
 
@@ -426,7 +453,7 @@ export const exportToHwpx = async (
     try {
         // 지역별 자기부담비율에 따른 사업비 데이터 계산
         const enrichedData = calculateBudgetData({ ...data });
-        
+
         const templatePath = getTemplatePath(supportType);
         console.log(
             `🚀 HWPX 내보내기: ${fileName}, template: ${templatePath}, supportType: ${supportType}`,

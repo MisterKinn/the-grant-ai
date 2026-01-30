@@ -93,31 +93,16 @@ export const USER_PROMPT_TEMPLATE_EARLY_STARTUP = `
 
 ### 2-3. 정부지원사업비 집행계획
 
-**<1단계 정부지원사업비 집행계획>**
-
-| 비 목 | 산 출 근 거 | 정부지원사업비(원) |
-| :--- | :--- | ---: |
-| 재료비 | [구체적인 산출 근거 예: OO 재료 10개 × 50,000원] | [금액] |
-| 인건비 | [산출 근거] | [금액] |
-| 외주용역비 | [산출 근거] | [금액] |
-| 광고선전비 | [산출 근거] | [금액] |
-| 창업활동비 | [산출 근거] | [금액] |
-| 기타 | [산출 근거] | [금액] |
-| **합계** | | **약 20,000,000원** |
-
-**<2단계 정부지원사업비 집행계획>**
-
-| 비 목 | 산 출 근 거 | 정부지원사업비(원) |
-| :--- | :--- | ---: |
-| 재료비 | [산출 근거] | [금액] |
-| 인건비 | [산출 근거] | [금액] |
-| 외주용역비 | [산출 근거] | [금액] |
-| 지급수수료 | [산출 근거] | [금액] |
-| 무형자산 취득비 | [산출 근거] | [금액] |
-| 광고선전비 | [산출 근거] | [금액] |
-| 창업활동비 | [산출 근거] | [금액] |
-| 기타 | [산출 근거] | [금액] |
-| **합계** | | **약 40,000,000원** |
+| 비 목 | 집행 계획 | 정부지원사업비(ⓐ) | 자기부담사업비(ⓑ) 현금 | 자기부담사업비(ⓑ) 현물 | 합계(ⓐ+ⓑ) |
+| :--- | :--- | ---: | ---: | ---: | ---: |
+| 재료비 | {{budget_material_basis}} | {{budget_material_amount}} | {{cash_material_amount}} | {{physical_budget_material_amount}} | {{total_material_amount}} |
+| 인건비 | {{budget_personnel_basis}} | {{budget_personnel_amount}} | {{cash_personnel_amount}} | {{physical_personnel_amount}} | {{total_personnel_amount}} |
+| 외주용역비 | {{budget_outsourcing_basis}} | {{budget_outsourcing_amount}} | {{cash_outsourcing_amount}} | {{physical_outsourcing_amount}} | {{total_outsourcing_amount}} |
+| 광고선전비 | {{budget_advertising_basis}} | {{budget_advertising_amount}} | {{cash_advertising_amount}} | {{physical_advertising_amount}} | {{total_advertising_amount}} |
+| 지급수수료 | {{budget_commission_basis}} | {{budget_commission_amount}} | {{cash_commission_amount}} | {{physical_commission_amount}} | {{total_commission_amount}} |
+| 창업활동비 | {{budget_activity_basis}} | {{budget_activity_amount}} | {{cash_activity_amount}} | {{physical_activity_amount}} | {{total_activity_amount}} |
+| 기타 | {{budget_etc_basis}} | {{budget_etc_amount}} | {{cash_etc_amount}} | {{physical_etc_amount}} | {{total_etc_amount}} |
+| **합 계** | | **{{total_grant}}** | **{{total_cash}}** | **{{total_physical}}** | **{{total_for_all}}** |
 
 # 3. 성장전략 (Scale-up)
 ### 3-1. 사업화 추진 전략 (비즈니스 모델)

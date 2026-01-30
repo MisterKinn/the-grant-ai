@@ -3,22 +3,27 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers":
+        "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 // Input validation schema
 const MessageSchema = z.object({
-  role: z.enum(["user", "assistant", "system"]),
-  content: z.string().max(100000, "Message content too long"),
+    role: z.enum(["user", "assistant", "system"]),
+    content: z.string().max(100000, "Message content too long"),
 });
 
 const ChatInputSchema = z.object({
-  messages: z.array(MessageSchema).max(100, "Too many messages"),
-  documentContext: z.string().max(200000, "Document context too long").optional().nullable(),
-  isCustomTemplate: z.boolean().optional().nullable(),
-  uploadedFilePath: z.string().optional().nullable(),
-  uploadedFileName: z.string().optional().nullable(),
+    messages: z.array(MessageSchema).max(100, "Too many messages"),
+    documentContext: z
+        .string()
+        .max(200000, "Document context too long")
+        .optional()
+        .nullable(),
+    isCustomTemplate: z.boolean().optional().nullable(),
+    uploadedFilePath: z.string().optional().nullable(),
+    uploadedFileName: z.string().optional().nullable(),
 });
 
 // 채팅용 강력 프롬프트 (generate-plan과 동일한 템플릿 포함)
@@ -172,31 +177,16 @@ const SYSTEM_PROMPT = `당신은 "The Grant AI"의 AI 어시스턴트입니다.
 
 ### 2-3. 정부지원사업비 집행계획
 
-**<1단계 정부지원사업비 집행계획>**
-
-| 비 목 | 산 출 근 거 | 정부지원사업비(원) |
-| :--- | :--- | ---: |
-| 재료비 | [구체적인 산출 근거 예: OO 재료 10개 × 50,000원] | [금액] |
-| 인건비 | [산출 근거] | [금액] |
-| 외주용역비 | [산출 근거] | [금액] |
-| 광고선전비 | [산출 근거] | [금액] |
-| 창업활동비 | [산출 근거] | [금액] |
-| 기타 | [산출 근거] | [금액] |
-| **합계** | | **약 20,000,000원** |
-
-**<2단계 정부지원사업비 집행계획>**
-
-| 비 목 | 산 출 근 거 | 정부지원사업비(원) |
-| :--- | :--- | ---: |
-| 재료비 | [산출 근거] | [금액] |
-| 인건비 | [산출 근거] | [금액] |
-| 외주용역비 | [산출 근거] | [금액] |
-| 지급수수료 | [산출 근거] | [금액] |
-| 무형자산 취득비 | [산출 근거] | [금액] |
-| 광고선전비 | [산출 근거] | [금액] |
-| 창업활동비 | [산출 근거] | [금액] |
-| 기타 | [산출 근거] | [금액] |
-| **합계** | | **약 40,000,000원** |
+| 비 목 | 집행 계획 | 정부지원사업비(ⓐ) | 자기부담사업비(ⓑ) 현금 | 자기부담사업비(ⓑ) 현물 | 합계(ⓐ+ⓑ) |
+| :--- | :--- | ---: | ---: | ---: | ---: |
+| 재료비 | {{budget_material_basis}} | {{budget_material_amount}} | {{cash_material_amount}} | {{physical_budget_material_amount}} | {{total_material_amount}} |
+| 인건비 | {{budget_personnel_basis}} | {{budget_personnel_amount}} | {{cash_personnel_amount}} | {{physical_personnel_amount}} | {{total_personnel_amount}} |
+| 외주용역비 | {{budget_outsourcing_basis}} | {{budget_outsourcing_amount}} | {{cash_outsourcing_amount}} | {{physical_outsourcing_amount}} | {{total_outsourcing_amount}} |
+| 광고선전비 | {{budget_advertising_basis}} | {{budget_advertising_amount}} | {{cash_advertising_amount}} | {{physical_advertising_amount}} | {{total_advertising_amount}} |
+| 지급수수료 | {{budget_commission_basis}} | {{budget_commission_amount}} | {{cash_commission_amount}} | {{physical_commission_amount}} | {{total_commission_amount}} |
+| 창업활동비 | {{budget_activity_basis}} | {{budget_activity_amount}} | {{cash_activity_amount}} | {{physical_activity_amount}} | {{total_activity_amount}} |
+| 기타 | {{budget_etc_basis}} | {{budget_etc_amount}} | {{cash_etc_amount}} | {{physical_etc_amount}} | {{total_etc_amount}} |
+| **합 계** | | **{{total_grant}}** | **{{total_cash}}** | **{{total_physical}}** | **{{total_for_all}}** |
 
 # 3. 성장전략 (Scale-up)
 ### 3-1. 사업화 추진 전략 (비즈니스 모델)
@@ -240,194 +230,290 @@ const SYSTEM_PROMPT = `당신은 "The Grant AI"의 AI 어시스턴트입니다.
 `;
 
 async function deductCredit(
-  userId: string,
-  supabaseUrl: string,
-  serviceRoleKey: string,
-): Promise<{ success: boolean; remainingCredits: number; isFreeUser: boolean; error?: string }> {
-  const supabase = createClient(supabaseUrl, serviceRoleKey);
-  const { data: profile, error: fetchError } = await supabase
-    .from("profiles")
-    .select("credits, plan_type")
-    .eq("user_id", userId)
-    .maybeSingle();
-  if (fetchError || !profile) return { success: true, remainingCredits: 0, isFreeUser: true };
-  const currentCredits = profile.credits || 0;
-  const isFreeUser = !profile.plan_type || profile.plan_type === "free";
-  if (isFreeUser || currentCredits <= 0) return { success: true, remainingCredits: currentCredits, isFreeUser: true };
-  await supabase
-    .from("profiles")
-    .update({ credits: currentCredits - 1 })
-    .eq("user_id", userId);
-  return { success: true, remainingCredits: currentCredits - 1, isFreeUser: false };
+    userId: string,
+    supabaseUrl: string,
+    serviceRoleKey: string,
+): Promise<{
+    success: boolean;
+    remainingCredits: number;
+    isFreeUser: boolean;
+    error?: string;
+}> {
+    const supabase = createClient(supabaseUrl, serviceRoleKey);
+    const { data: profile, error: fetchError } = await supabase
+        .from("profiles")
+        .select("credits, plan_type")
+        .eq("user_id", userId)
+        .maybeSingle();
+    if (fetchError || !profile)
+        return { success: true, remainingCredits: 0, isFreeUser: true };
+    const currentCredits = profile.credits || 0;
+    const isFreeUser = !profile.plan_type || profile.plan_type === "free";
+    if (isFreeUser || currentCredits <= 0)
+        return {
+            success: true,
+            remainingCredits: currentCredits,
+            isFreeUser: true,
+        };
+    await supabase
+        .from("profiles")
+        .update({ credits: currentCredits - 1 })
+        .eq("user_id", userId);
+    return {
+        success: true,
+        remainingCredits: currentCredits - 1,
+        isFreeUser: false,
+    };
 }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-  try {
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
-    const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
-    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("Key missing");
-    
-    // Try to get user from auth header, but allow guest access
-    let userId: string | null = null;
-    const authHeader = req.headers.get("Authorization");
-    
-    if (authHeader && !authHeader.includes(SUPABASE_ANON_KEY!)) {
-      // Only try to get user if it's not the anon key (guest access)
-      const supabaseUser = createClient(SUPABASE_URL!, SUPABASE_ANON_KEY!, {
-        global: { headers: { Authorization: authHeader } },
-      });
-      const { data: { user } } = await supabaseUser.auth.getUser();
-      userId = user?.id || null;
-    }
-    
-    // For authenticated users, deduct credits
-    // For guest users (userId is null), allow free trial usage
+    if (req.method === "OPTIONS")
+        return new Response("ok", { headers: corsHeaders });
+    try {
+        const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+        const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+        const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
+        const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get(
+            "SUPABASE_SERVICE_ROLE_KEY",
+        );
+        if (!LOVABLE_API_KEY) throw new Error("Key missing");
 
-    // Parse and validate input
-    const rawBody = await req.json();
-    const parseResult = ChatInputSchema.safeParse(rawBody);
-    if (!parseResult.success) {
-      return new Response(
-        JSON.stringify({ error: "Invalid input format", details: parseResult.error.flatten() }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-const { messages, documentContext, isCustomTemplate, uploadedFilePath, uploadedFileName } = parseResult.data;
-    
-    console.log("[chat] isCustomTemplate:", isCustomTemplate, "uploadedFile:", uploadedFileName, "path:", uploadedFilePath);
-    
-    // Read uploaded file content if available
-    let uploadedFileContent = "";
-    if (uploadedFilePath && uploadedFileName) {
-      try {
-        console.log("[chat] Attempting to read uploaded file:", uploadedFilePath);
-        const supabaseAdmin = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
-        
-        // Try both buckets (user-uploads for new uploads, user-files for legacy)
-        let fileData = null;
-        let downloadError = null;
-        
-        // Try user-uploads bucket first (new uploads from ChatPanel)
-        const result1 = await supabaseAdmin
-          .storage
-          .from('user-uploads')
-          .download(uploadedFilePath);
-        
-        if (result1.error) {
-          console.log("[chat] user-uploads bucket error, trying user-files:", result1.error.message);
-          // Try user-files bucket (legacy uploads)
-          const result2 = await supabaseAdmin
-            .storage
-            .from('user-files')
-            .download(uploadedFilePath);
-          fileData = result2.data;
-          downloadError = result2.error;
-        } else {
-          fileData = result1.data;
-        }
-        
-        if (downloadError) {
-          console.error("[chat] Error downloading file:", downloadError);
-        } else if (fileData) {
-          // Check file type and extract text
-          const fileType = uploadedFileName.toLowerCase();
-          
-          if (fileType.endsWith('.pdf')) {
-            // Extract text from PDF using the parse-pdf function
-            console.log("[chat] PDF file detected - extracting text via AI");
-            try {
-              // Convert PDF blob to base64
-              const arrayBuffer = await fileData.arrayBuffer();
-              const uint8Array = new Uint8Array(arrayBuffer);
-              
-              // Chunked base64 encoding to avoid memory limits
-              const CHUNK_SIZE = 32768;
-              let base64Data = "";
-              for (let i = 0; i < uint8Array.length; i += CHUNK_SIZE) {
-                const chunk = uint8Array.slice(i, i + CHUNK_SIZE);
-                base64Data += String.fromCharCode(...chunk);
-              }
-              base64Data = btoa(base64Data);
-              
-              console.log("[chat] PDF base64 length:", base64Data.length);
-              
-              // Call Lovable AI to extract text from PDF
-              const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-                method: "POST",
-                headers: {
-                  "Authorization": `Bearer ${LOVABLE_API_KEY}`,
-                  "Content-Type": "application/json",
+        // Try to get user from auth header, but allow guest access
+        let userId: string | null = null;
+        const authHeader = req.headers.get("Authorization");
+
+        if (authHeader && !authHeader.includes(SUPABASE_ANON_KEY!)) {
+            // Only try to get user if it's not the anon key (guest access)
+            const supabaseUser = createClient(
+                SUPABASE_URL!,
+                SUPABASE_ANON_KEY!,
+                {
+                    global: { headers: { Authorization: authHeader } },
                 },
-                body: JSON.stringify({
-                  model: "google/gemini-2.5-flash",
-                  messages: [
-                    {
-                      role: "user",
-                      content: [
-                        {
-                          type: "image_url",
-                          image_url: {
-                            url: `data:application/pdf;base64,${base64Data}`,
-                          },
-                        },
-                        {
-                          type: "text",
-                          text: "이 PDF 문서의 모든 텍스트 내용을 추출해주세요. 표, 목차, 본문 등 모든 텍스트를 원본 구조를 최대한 유지하며 추출하세요. 불필요한 설명 없이 추출된 텍스트만 출력하세요.",
-                        },
-                      ],
-                    },
-                  ],
-                  max_tokens: 16000,
-                }),
-              });
-              
-              if (!aiResponse.ok) {
-                const errText = await aiResponse.text();
-                console.error("[chat] PDF extraction API error:", aiResponse.status, errText);
-                uploadedFileContent = `[PDF 파일 "${uploadedFileName}"에서 텍스트 추출에 실패했습니다.]`;
-              } else {
-                const aiData = await aiResponse.json();
-                const extractedText = aiData.choices?.[0]?.message?.content || "";
-                
-                if (extractedText) {
-                  // Limit to 50000 characters for context stability
-                  uploadedFileContent = extractedText.substring(0, 50000);
-                  console.log("[chat] PDF text extracted, length:", uploadedFileContent.length);
-                } else {
-                  uploadedFileContent = `[PDF 파일 "${uploadedFileName}"에서 텍스트를 추출할 수 없었습니다.]`;
-                }
-              }
-            } catch (pdfError) {
-              console.error("[chat] PDF extraction error:", pdfError);
-              uploadedFileContent = `[PDF 파일 "${uploadedFileName}" 처리 중 오류가 발생했습니다.]`;
-            }
-            
-          } else if (fileType.endsWith('.txt') || fileType.endsWith('.md')) {
-            // Plain text files
-            uploadedFileContent = await fileData.text();
-            console.log("[chat] Read text file, length:", uploadedFileContent.length);
-          } else if (fileType.endsWith('.hwpx')) {
-            // HWPX files - these are ZIP archives
-            uploadedFileContent = "[HWPX 파일이 업로드되었습니다. 템플릿 구조는 documentContext에 포함되어 있습니다.]";
-          } else {
-            uploadedFileContent = `[${uploadedFileName} 파일이 업로드되었습니다.]`;
-          }
+            );
+            const {
+                data: { user },
+            } = await supabaseUser.auth.getUser();
+            userId = user?.id || null;
         }
-      } catch (fileError) {
-        console.error("[chat] Error processing uploaded file:", fileError);
-      }
-    }
-    
-    // Only deduct credits for authenticated users
-    if (userId) {
-      await deductCredit(userId, SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
-    }
 
-    // For custom templates (HWPX), use a prompt that generates label:value pairs matching the template
-    const CUSTOM_TEMPLATE_PROMPT = `당신은 "The Grant AI"의 AI 어시스턴트입니다.
+        // For authenticated users, deduct credits
+        // For guest users (userId is null), allow free trial usage
+
+        // Parse and validate input
+        const rawBody = await req.json();
+        const parseResult = ChatInputSchema.safeParse(rawBody);
+        if (!parseResult.success) {
+            return new Response(
+                JSON.stringify({
+                    error: "Invalid input format",
+                    details: parseResult.error.flatten(),
+                }),
+                {
+                    status: 400,
+                    headers: {
+                        ...corsHeaders,
+                        "Content-Type": "application/json",
+                    },
+                },
+            );
+        }
+        const {
+            messages,
+            documentContext,
+            isCustomTemplate,
+            uploadedFilePath,
+            uploadedFileName,
+        } = parseResult.data;
+
+        console.log(
+            "[chat] isCustomTemplate:",
+            isCustomTemplate,
+            "uploadedFile:",
+            uploadedFileName,
+            "path:",
+            uploadedFilePath,
+        );
+
+        // Read uploaded file content if available
+        let uploadedFileContent = "";
+        if (uploadedFilePath && uploadedFileName) {
+            try {
+                console.log(
+                    "[chat] Attempting to read uploaded file:",
+                    uploadedFilePath,
+                );
+                const supabaseAdmin = createClient(
+                    SUPABASE_URL!,
+                    SUPABASE_SERVICE_ROLE_KEY!,
+                );
+
+                // Try both buckets (user-uploads for new uploads, user-files for legacy)
+                let fileData = null;
+                let downloadError = null;
+
+                // Try user-uploads bucket first (new uploads from ChatPanel)
+                const result1 = await supabaseAdmin.storage
+                    .from("user-uploads")
+                    .download(uploadedFilePath);
+
+                if (result1.error) {
+                    console.log(
+                        "[chat] user-uploads bucket error, trying user-files:",
+                        result1.error.message,
+                    );
+                    // Try user-files bucket (legacy uploads)
+                    const result2 = await supabaseAdmin.storage
+                        .from("user-files")
+                        .download(uploadedFilePath);
+                    fileData = result2.data;
+                    downloadError = result2.error;
+                } else {
+                    fileData = result1.data;
+                }
+
+                if (downloadError) {
+                    console.error(
+                        "[chat] Error downloading file:",
+                        downloadError,
+                    );
+                } else if (fileData) {
+                    // Check file type and extract text
+                    const fileType = uploadedFileName.toLowerCase();
+
+                    if (fileType.endsWith(".pdf")) {
+                        // Extract text from PDF using the parse-pdf function
+                        console.log(
+                            "[chat] PDF file detected - extracting text via AI",
+                        );
+                        try {
+                            // Convert PDF blob to base64
+                            const arrayBuffer = await fileData.arrayBuffer();
+                            const uint8Array = new Uint8Array(arrayBuffer);
+
+                            // Chunked base64 encoding to avoid memory limits
+                            const CHUNK_SIZE = 32768;
+                            let base64Data = "";
+                            for (
+                                let i = 0;
+                                i < uint8Array.length;
+                                i += CHUNK_SIZE
+                            ) {
+                                const chunk = uint8Array.slice(
+                                    i,
+                                    i + CHUNK_SIZE,
+                                );
+                                base64Data += String.fromCharCode(...chunk);
+                            }
+                            base64Data = btoa(base64Data);
+
+                            console.log(
+                                "[chat] PDF base64 length:",
+                                base64Data.length,
+                            );
+
+                            // Call Lovable AI to extract text from PDF
+                            const aiResponse = await fetch(
+                                "https://ai.gateway.lovable.dev/v1/chat/completions",
+                                {
+                                    method: "POST",
+                                    headers: {
+                                        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+                                        "Content-Type": "application/json",
+                                    },
+                                    body: JSON.stringify({
+                                        model: "google/gemini-2.5-flash",
+                                        messages: [
+                                            {
+                                                role: "user",
+                                                content: [
+                                                    {
+                                                        type: "image_url",
+                                                        image_url: {
+                                                            url: `data:application/pdf;base64,${base64Data}`,
+                                                        },
+                                                    },
+                                                    {
+                                                        type: "text",
+                                                        text: "이 PDF 문서의 모든 텍스트 내용을 추출해주세요. 표, 목차, 본문 등 모든 텍스트를 원본 구조를 최대한 유지하며 추출하세요. 불필요한 설명 없이 추출된 텍스트만 출력하세요.",
+                                                    },
+                                                ],
+                                            },
+                                        ],
+                                        max_tokens: 16000,
+                                    }),
+                                },
+                            );
+
+                            if (!aiResponse.ok) {
+                                const errText = await aiResponse.text();
+                                console.error(
+                                    "[chat] PDF extraction API error:",
+                                    aiResponse.status,
+                                    errText,
+                                );
+                                uploadedFileContent = `[PDF 파일 "${uploadedFileName}"에서 텍스트 추출에 실패했습니다.]`;
+                            } else {
+                                const aiData = await aiResponse.json();
+                                const extractedText =
+                                    aiData.choices?.[0]?.message?.content || "";
+
+                                if (extractedText) {
+                                    // Limit to 50000 characters for context stability
+                                    uploadedFileContent =
+                                        extractedText.substring(0, 50000);
+                                    console.log(
+                                        "[chat] PDF text extracted, length:",
+                                        uploadedFileContent.length,
+                                    );
+                                } else {
+                                    uploadedFileContent = `[PDF 파일 "${uploadedFileName}"에서 텍스트를 추출할 수 없었습니다.]`;
+                                }
+                            }
+                        } catch (pdfError) {
+                            console.error(
+                                "[chat] PDF extraction error:",
+                                pdfError,
+                            );
+                            uploadedFileContent = `[PDF 파일 "${uploadedFileName}" 처리 중 오류가 발생했습니다.]`;
+                        }
+                    } else if (
+                        fileType.endsWith(".txt") ||
+                        fileType.endsWith(".md")
+                    ) {
+                        // Plain text files
+                        uploadedFileContent = await fileData.text();
+                        console.log(
+                            "[chat] Read text file, length:",
+                            uploadedFileContent.length,
+                        );
+                    } else if (fileType.endsWith(".hwpx")) {
+                        // HWPX files - these are ZIP archives
+                        uploadedFileContent =
+                            "[HWPX 파일이 업로드되었습니다. 템플릿 구조는 documentContext에 포함되어 있습니다.]";
+                    } else {
+                        uploadedFileContent = `[${uploadedFileName} 파일이 업로드되었습니다.]`;
+                    }
+                }
+            } catch (fileError) {
+                console.error(
+                    "[chat] Error processing uploaded file:",
+                    fileError,
+                );
+            }
+        }
+
+        // Only deduct credits for authenticated users
+        if (userId) {
+            await deductCredit(
+                userId,
+                SUPABASE_URL!,
+                SUPABASE_SERVICE_ROLE_KEY!,
+            );
+        }
+
+        // For custom templates (HWPX), use a prompt that generates label:value pairs matching the template
+        const CUSTOM_TEMPLATE_PROMPT = `당신은 "The Grant AI"의 AI 어시스턴트입니다.
 
 **[절대 규칙 - 모든 필드 채우기!!!]**
 
@@ -511,34 +597,53 @@ const { messages, documentContext, isCustomTemplate, uploadedFilePath, uploadedF
 - 항목 누락 금지
 - "포함해야 할 항목" 목록에 없어도 문서 템플릿에 있는 모든 필드는 반드시 값을 생성해야 함!`;
 
-    // 채팅 시에는 현재 문맥과 시스템 프롬프트를 결합
-    const basePrompt = isCustomTemplate ? CUSTOM_TEMPLATE_PROMPT : SYSTEM_PROMPT;
-    
-    // Build context with uploaded file content if available
-    let contextSection = "";
-    if (uploadedFileContent && uploadedFileContent.length > 10) {
-      contextSection += `\n\n**[업로드된 참고 파일: ${uploadedFileName}]**\n아래는 사용자가 업로드한 파일의 내용입니다. 이 정보를 참고하여 문서를 작성하세요:\n\n${uploadedFileContent.substring(0, 50000)}\n\n---\n`;
-      console.log("[chat] Added uploaded file content to context, length:", uploadedFileContent.length);
-    }
-    
-    if (documentContext) {
-      contextSection += `\n\n**[현재 문서 템플릿 - 여기서 모든 필드를 추출하세요!]**\n${documentContext}\n\n**위 템플릿에서 발견되는 모든 라벨(소속, 성명, 기관명, 겸직기간 등)에 대해 빠짐없이 값을 생성하세요!**`;
-    }
-    
-    const fullPrompt = basePrompt + contextSection;
+        // 채팅 시에는 현재 문맥과 시스템 프롬프트를 결합
+        const basePrompt = isCustomTemplate
+            ? CUSTOM_TEMPLATE_PROMPT
+            : SYSTEM_PROMPT;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [{ role: "system", content: fullPrompt }, ...messages],
-        stream: true,
-      }),
-    });
+        // Build context with uploaded file content if available
+        let contextSection = "";
+        if (uploadedFileContent && uploadedFileContent.length > 10) {
+            contextSection += `\n\n**[업로드된 참고 파일: ${uploadedFileName}]**\n아래는 사용자가 업로드한 파일의 내용입니다. 이 정보를 참고하여 문서를 작성하세요:\n\n${uploadedFileContent.substring(0, 50000)}\n\n---\n`;
+            console.log(
+                "[chat] Added uploaded file content to context, length:",
+                uploadedFileContent.length,
+            );
+        }
 
-    return new Response(response.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
-  } catch (e) {
-    return new Response(JSON.stringify({ error: "Error" }), { status: 500, headers: corsHeaders });
-  }
+        if (documentContext) {
+            contextSection += `\n\n**[현재 문서 템플릿 - 여기서 모든 필드를 추출하세요!]**\n${documentContext}\n\n**위 템플릿에서 발견되는 모든 라벨(소속, 성명, 기관명, 겸직기간 등)에 대해 빠짐없이 값을 생성하세요!**`;
+        }
+
+        const fullPrompt = basePrompt + contextSection;
+
+        const response = await fetch(
+            "https://ai.gateway.lovable.dev/v1/chat/completions",
+            {
+                method: "POST",
+                headers: {
+                    Authorization: `Bearer ${LOVABLE_API_KEY}`,
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    model: "google/gemini-2.5-flash",
+                    messages: [
+                        { role: "system", content: fullPrompt },
+                        ...messages,
+                    ],
+                    stream: true,
+                }),
+            },
+        );
+
+        return new Response(response.body, {
+            headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+        });
+    } catch (e) {
+        return new Response(JSON.stringify({ error: "Error" }), {
+            status: 500,
+            headers: corsHeaders,
+        });
+    }
 });
