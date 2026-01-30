@@ -612,55 +612,67 @@ export const BusinessInfoPanel = forwardRef<
 
         // Auto-extract from editor content when it changes substantially
         useEffect(() => {
-            // Extract when content grows significantly (every 500 chars) until we've extracted once
+            // 팀 구성 정보는 항상 추출 시도 (4-2 표가 문서 끝에 있으므로)
             if (editorContent && editorContent.length > 200) {
-                const shouldExtract =
+                // 기본 정보는 처음 한 번만, 팀 정보는 항상 추출
+                const shouldExtractBasic =
                     !hasExtracted &&
                     (editorContent.length >
                         lastContentLengthRef.current + 300 ||
                         editorContent.length > 1000);
+                
+                // 팀 정보는 4-2 표가 포함되어 있으면 항상 추출
+                const hasTeamTable = editorContent.includes("팀원1") || editorContent.includes("팀원 1");
 
-                if (shouldExtract) {
+                if (shouldExtractBasic || hasTeamTable) {
+                    console.log("[BusinessInfoPanel] 추출 시도:", {
+                        editorContentLength: editorContent.length,
+                        hasTeamTable,
+                        shouldExtractBasic
+                    });
+                    
                     const extracted =
                         extractBusinessInfoFromContent(editorContent);
                     if (Object.keys(extracted).length > 0) {
                         setBusinessInfoState((prev) => {
                             const updated = { ...prev };
 
-                            // 기업 기본 정보 추출
-                            if (extracted.info_company_name) {
-                                updated.info_company_name =
-                                    extracted.info_company_name;
-                            }
-                            if (extracted.info_reg_number) {
-                                updated.info_reg_number =
-                                    extracted.info_reg_number;
-                            }
-                            if (extracted.info_est_date) {
-                                updated.info_est_date = extracted.info_est_date;
-                            }
-                            if (extracted.info_address) {
-                                updated.info_address = extracted.info_address;
-                            }
+                            // 기업 기본 정보 추출 (처음 한 번만)
+                            if (shouldExtractBasic) {
+                                if (extracted.info_company_name) {
+                                    updated.info_company_name =
+                                        extracted.info_company_name;
+                                }
+                                if (extracted.info_reg_number) {
+                                    updated.info_reg_number =
+                                        extracted.info_reg_number;
+                                }
+                                if (extracted.info_est_date) {
+                                    updated.info_est_date = extracted.info_est_date;
+                                }
+                                if (extracted.info_address) {
+                                    updated.info_address = extracted.info_address;
+                                }
 
-                            // 창업아이템 정보 추출
-                            if (extracted.item_name && !prev.item_name) {
-                                updated.item_name = extracted.item_name;
-                            }
-                            if (
-                                extracted.target_output &&
-                                !prev.target_output
-                            ) {
-                                updated.target_output = extracted.target_output;
-                            }
-                            if (extracted.support_field) {
-                                updated.support_field = extracted.support_field;
-                            }
-                            if (extracted.tech_field) {
-                                updated.tech_field = extracted.tech_field;
+                                // 창업아이템 정보 추출
+                                if (extracted.item_name && !prev.item_name) {
+                                    updated.item_name = extracted.item_name;
+                                }
+                                if (
+                                    extracted.target_output &&
+                                    !prev.target_output
+                                ) {
+                                    updated.target_output = extracted.target_output;
+                                }
+                                if (extracted.support_field) {
+                                    updated.support_field = extracted.support_field;
+                                }
+                                if (extracted.tech_field) {
+                                    updated.tech_field = extracted.tech_field;
+                                }
                             }
                             
-                            // 팀 구성 현황 추출 (4-2 표에서)
+                            // 팀 구성 현황 추출 (4-2 표에서) - 항상 추출
                             for (let i = 1; i <= 5; i++) {
                                 const posKey = `team_${i}_position` as keyof BusinessInfo;
                                 const roleKey = `team_${i}_role` as keyof BusinessInfo;
