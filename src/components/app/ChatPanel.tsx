@@ -31,6 +31,7 @@ interface ChatPanelProps {
     uploadedFileName?: string | null;
     isCustomTemplate?: boolean;
     onFileUploaded?: (filePath: string, fileName: string) => void;
+    grantType?: string | null; // 2026 초창패: "EARLY_STARTUP", 2025 예창패: "PRE_STARTUP"
 }
 
 export interface ChatPanelHandle {
@@ -48,6 +49,7 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(
             uploadedFileName,
             isCustomTemplate,
             onFileUploaded,
+            grantType,
         },
         ref,
     ) {
@@ -75,6 +77,7 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(
             currentFilePath,
             currentFileName,
             isCustomTemplate,
+            grantType,
         );
 
         const [input, setInput] = useState("");

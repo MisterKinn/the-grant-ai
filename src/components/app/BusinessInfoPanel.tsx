@@ -394,62 +394,6 @@ const extractBusinessInfoFromContent = (
     // Set default region as 일반지역
     extracted.region_type = "일반지역";
 
-    // ========== 사업비 집행 계획 추출 (AI 생성 표에서) ==========
-    // 2-3 정부지원사업비 집행계획 표에서 비목별 데이터 추출
-    const budgetCategories = [
-        { name: "재료비", key: "material" },
-        { name: "인건비", key: "personnel" },
-        { name: "외주용역비", key: "outsourcing" },
-        { name: "광고선전비", key: "advertising" },
-        { name: "지급수수료", key: "commission" },
-        { name: "창업활동비", key: "activity" },
-        { name: "기타", key: "etc" },
-    ];
-
-    for (const { name, key } of budgetCategories) {
-        // 테이블 행 패턴: | 비목 | 산출근거/집행계획 | 금액 |
-        // 다양한 테이블 형식 지원
-        const patterns = [
-            // Markdown 테이블: | 재료비 | 산출근거 | 금액 |
-            new RegExp(`\\|\\s*${name}\\s*\\|\\s*([^|]+)\\s*\\|\\s*([0-9,]+)`, 'i'),
-            // HTML 테이블: <td>재료비</td><td>산출근거</td><td>금액</td>
-            new RegExp(`${name}[^<]*<\\/td>\\s*<td[^>]*>([^<]+)<\\/td>\\s*<td[^>]*>([0-9,]+)`, 'i'),
-            // 줄글 형식: 재료비: 산출근거, 금액원
-            new RegExp(`${name}\\s*[:：]\\s*([^,\\n]+)[,，]?\\s*([0-9,]+)\\s*원?`, 'i'),
-        ];
-
-        for (const pattern of patterns) {
-            const match = content.match(pattern);
-            if (match && match[1] && match[2]) {
-                const basis = match[1].trim().replace(/\*+/g, "").substring(0, 200);
-                const amount = parseInt(match[2].replace(/,/g, ""), 10);
-                
-                if (basis && !isNaN(amount) && amount > 0) {
-                    (extracted as any)[`budget_${key}_basis`] = basis;
-                    (extracted as any)[`budget_${key}_amount`] = amount;
-                    break;
-                }
-            }
-        }
-    }
-
-    // 정부지원사업비 총액 추출
-    const totalPatterns = [
-        /합\s*계[^0-9]*([0-9,]+)\s*원?/i,
-        /총[액계]\s*[:：]?\s*([0-9,]+)\s*원?/i,
-        /정부지원사업비\s*총액\s*[:：]?\s*([0-9,]+)/i,
-    ];
-    for (const pattern of totalPatterns) {
-        const match = cleanContent.match(pattern);
-        if (match && match[1]) {
-            const amount = parseInt(match[1].replace(/,/g, ""), 10);
-            if (!isNaN(amount) && amount > 1000000) {
-                extracted.budget_gov_amount = amount;
-                break;
-            }
-        }
-    }
-
     // Set default budget values for 2026 초기창업패키지 (typical values)
     extracted.budget_gov = "100백만원";
     extracted.budget_self_cash = "10백만원";

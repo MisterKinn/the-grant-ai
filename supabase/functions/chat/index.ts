@@ -24,6 +24,7 @@ const ChatInputSchema = z.object({
     isCustomTemplate: z.boolean().optional().nullable(),
     uploadedFilePath: z.string().optional().nullable(),
     uploadedFileName: z.string().optional().nullable(),
+    grantType: z.string().optional().nullable(), // 2026 초창패: "EARLY_STARTUP", 2025 예창패: "PRE_STARTUP"
 });
 
 // 채팅용 강력 프롬프트 (generate-plan과 동일한 템플릿 포함)
@@ -229,6 +230,64 @@ const SYSTEM_PROMPT = `당신은 "The Grant AI"의 AI 어시스턴트입니다.
 | 기타 협력 | [파트너명] | [역량] | [협업 방안] | [시기] |
 `;
 
+// 2025 예비창업패키지용 2-3 표 (1단계/2단계 분리)
+const BUDGET_TABLE_2025_PRE = `### 2-3. 정부지원사업비 집행계획
+
+**<1단계 정부지원사업비 집행계획>**
+
+| 비 목 | 산 출 근 거 | 정부지원사업비(원) |
+| :--- | :--- | ---: |
+| 재료비 | [구체적인 산출 근거] | [금액] |
+| 인건비 | [산출 근거] | [금액] |
+| 외주용역비 | [산출 근거] | [금액] |
+| 광고선전비 | [산출 근거] | [금액] |
+| 창업활동비 | [산출 근거] | [금액] |
+| 기타 | [산출 근거] | [금액] |
+| **합계** | | **[총액]** |
+
+**<2단계 정부지원사업비 집행계획>**
+
+| 비 목 | 산 출 근 거 | 정부지원사업비(원) |
+| :--- | :--- | ---: |
+| 재료비 | [산출 근거] | [금액] |
+| 인건비 | [산출 근거] | [금액] |
+| 외주용역비 | [산출 근거] | [금액] |
+| 지급수수료 | [산출 근거] | [금액] |
+| 광고선전비 | [산출 근거] | [금액] |
+| 창업활동비 | [산출 근거] | [금액] |
+| 기타 | [산출 근거] | [금액] |
+| **합계** | | **[총액]** |`;
+
+// 2026 초기창업패키지용 2-3 표 (단일 표, 자기부담사업비 포함)
+const BUDGET_TABLE_2026_EARLY = `### 2-3. 정부지원사업비 집행계획
+
+| 비 목 | 집행 계획 | 정부지원사업비(ⓐ) | 자기부담사업비(ⓑ) 현금 | 자기부담사업비(ⓑ) 현물 | 합계(ⓐ+ⓑ) |
+| :--- | :--- | ---: | ---: | ---: | ---: |
+| 재료비 | [구체적인 집행 계획] | [금액] | [금액] | [금액] | [합계] |
+| 인건비 | [집행 계획] | [금액] | [금액] | [금액] | [합계] |
+| 외주용역비 | [집행 계획] | [금액] | [금액] | [금액] | [합계] |
+| 광고선전비 | [집행 계획] | [금액] | [금액] | [금액] | [합계] |
+| 지급수수료 | [집행 계획] | [금액] | [금액] | [금액] | [합계] |
+| 창업활동비 | [집행 계획] | [금액] | [금액] | [금액] | [합계] |
+| 기타 | [집행 계획] | [금액] | [금액] | [금액] | [합계] |
+| **합 계** | | **[총액]** | **[총액]** | **[총액]** | **[총액]** |`;
+
+// grantType에 따라 적절한 프롬프트 선택
+const getSystemPromptForGrantType = (grantType: string | null | undefined): string => {
+    // 2025 예비창업패키지 (1단계/2단계 분리)
+    if (grantType === "PRE_STARTUP") {
+        return SYSTEM_PROMPT.replace(
+            /### 2-3\. 정부지원사업비 집행계획[\s\S]*?\| \*\*합 계\*\* \|[^\n]*\n/,
+            BUDGET_TABLE_2025_PRE + "\n\n"
+        );
+    }
+    // 2026 초기창업패키지 또는 기본값 (단일 표)
+    return SYSTEM_PROMPT.replace(
+        /### 2-3\. 정부지원사업비 집행계획[\s\S]*?\| \*\*합 계\*\* \|[^\n]*\n/,
+        BUDGET_TABLE_2026_EARLY + "\n\n"
+    );
+};
+
 async function deductCredit(
     userId: string,
     supabaseUrl: string,
@@ -324,11 +383,14 @@ serve(async (req) => {
             isCustomTemplate,
             uploadedFilePath,
             uploadedFileName,
+            grantType,
         } = parseResult.data;
 
         console.log(
             "[chat] isCustomTemplate:",
             isCustomTemplate,
+            "grantType:",
+            grantType,
             "uploadedFile:",
             uploadedFileName,
             "path:",
@@ -598,9 +660,12 @@ serve(async (req) => {
 - "포함해야 할 항목" 목록에 없어도 문서 템플릿에 있는 모든 필드는 반드시 값을 생성해야 함!`;
 
         // 채팅 시에는 현재 문맥과 시스템 프롬프트를 결합
+        // grantType에 따라 적절한 프롬프트 선택 (2025 예창패 vs 2026 초창패)
         const basePrompt = isCustomTemplate
             ? CUSTOM_TEMPLATE_PROMPT
-            : SYSTEM_PROMPT;
+            : getSystemPromptForGrantType(grantType);
+
+        console.log("[chat] Using prompt for grantType:", grantType || "default (EARLY_STARTUP)");
 
         // Build context with uploaded file content if available
         let contextSection = "";

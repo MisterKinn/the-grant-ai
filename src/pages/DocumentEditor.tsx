@@ -965,6 +965,7 @@ export default function DocumentEditor() {
                             uploadedFilePath={uploadedFilePath}
                             uploadedFileName={uploadedFileName}
                             isCustomTemplate={isCustomTemplate}
+                            grantType={grantType}
                         />
                     </div>
                 )}

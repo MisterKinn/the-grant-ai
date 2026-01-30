@@ -34,6 +34,7 @@ export function useChat(
   uploadedFilePath?: string | null,
   uploadedFileName?: string | null,
   isCustomTemplate?: boolean,
+  grantType?: string | null, // 2026 초창패: "EARLY_STARTUP", 2025 예창패: "PRE_STARTUP"
 ) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -173,6 +174,7 @@ export function useChat(
             uploadedFilePath,
             uploadedFileName,
             isCustomTemplate,
+            grantType, // 2026 초창패: "EARLY_STARTUP", 2025 예창패: "PRE_STARTUP"
           }),
         });
 
