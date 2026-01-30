@@ -219,7 +219,10 @@ export function useChat(
             }
 
             const enhancedContent = additionalInstruction + content;
-            const userMsg: ChatMessage = { role: "user", content: enhancedContent };
+            const userMsg: ChatMessage = {
+                role: "user",
+                content: enhancedContent,
+            };
             // UI에는 원본 메시지만 표시
             setMessages((prev) => [...prev, { role: "user", content }]);
             setIsLoading(true);

@@ -394,11 +394,42 @@ const extractBusinessInfoFromContent = (
     // Set default region as 일반지역
     extracted.region_type = "일반지역";
 
-    // Set default budget values for 2026 초기창업패키지 (typical values)
-    extracted.budget_gov = "100백만원";
-    extracted.budget_self_cash = "10백만원";
-    extracted.budget_self_kind = "0";
-    extracted.budget_total = "110백만원";
+    // ========== 2-3 정부지원사업비 집행계획 표에서 합계 추출 ==========
+    // 마크다운 표의 합계 행: | **합 계** | | **25,000,000** | **2,500,000** | **0** | **27,500,000** |
+    const budgetTotalRegex = /\|\s*\*?\*?합\s*계\*?\*?\s*\|\s*[^|]*\|\s*\*?\*?([0-9,]+)\*?\*?\s*\|\s*\*?\*?([0-9,]+)\*?\*?\s*\|\s*\*?\*?([0-9,]+)\*?\*?\s*\|\s*\*?\*?([0-9,]+)\*?\*?\s*\|/i;
+    const budgetMatch = cleanContent.match(budgetTotalRegex);
+    
+    if (budgetMatch) {
+        const govAmount = budgetMatch[1].replace(/,/g, '');
+        const cashAmount = budgetMatch[2].replace(/,/g, '');
+        const kindAmount = budgetMatch[3].replace(/,/g, '');
+        const totalAmount = budgetMatch[4].replace(/,/g, '');
+        
+        // 숫자로 변환해서 포맷팅
+        const formatAmount = (num: string) => {
+            const n = parseInt(num, 10);
+            if (isNaN(n)) return "0";
+            return n.toLocaleString('ko-KR');
+        };
+        
+        extracted.budget_gov = formatAmount(govAmount);
+        extracted.budget_self_cash = formatAmount(cashAmount);
+        extracted.budget_self_kind = formatAmount(kindAmount);
+        extracted.budget_total = formatAmount(totalAmount);
+        
+        console.log("[extractBusinessInfo] 2-3 예산 추출:", {
+            budget_gov: extracted.budget_gov,
+            budget_self_cash: extracted.budget_self_cash,
+            budget_self_kind: extracted.budget_self_kind,
+            budget_total: extracted.budget_total
+        });
+    } else {
+        // 기본값 (추출 실패 시)
+        extracted.budget_gov = "100,000,000";
+        extracted.budget_self_cash = "10,000,000";
+        extracted.budget_self_kind = "0";
+        extracted.budget_total = "110,000,000";
+    }
 
     // Set target_output if not already set (use item_name as fallback)
     if (!extracted.target_output && extracted.item_name) {
@@ -407,43 +438,57 @@ const extractBusinessInfoFromContent = (
 
     // ========== 4-2 팀 구성(안) 표에서 팀원 정보 추출 ==========
     // 마크다운 표 형식: | 팀원1 | CTO | AI 알고리즘 개발 | 20년 경력 | 확정 |
-    const teamTableRegex = /\|\s*(팀원\d+|팀원 ?\d+)\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|\s*(확정|예정|구성|미구성)?\s*\|/gi;
+    const teamTableRegex =
+        /\|\s*(팀원\d+|팀원 ?\d+)\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|\s*(확정|예정|구성|미구성)?\s*\|/gi;
     let teamMatch;
     let teamIndex = 1;
-    
-    while ((teamMatch = teamTableRegex.exec(cleanContent)) !== null && teamIndex <= 5) {
+
+    while (
+        (teamMatch = teamTableRegex.exec(cleanContent)) !== null &&
+        teamIndex <= 5
+    ) {
         const [, memberType, position, role, competency, status] = teamMatch;
-        
+
         // 팀원만 추출 (대표자 본인 제외)
         if (memberType) {
-            (extracted as any)[`team_${teamIndex}_position`] = position?.trim() || "";
+            (extracted as any)[`team_${teamIndex}_position`] =
+                position?.trim() || "";
             (extracted as any)[`team_${teamIndex}_role`] = role?.trim() || "";
-            (extracted as any)[`team_${teamIndex}_competency`] = competency?.trim() || "";
+            (extracted as any)[`team_${teamIndex}_competency`] =
+                competency?.trim() || "";
             // 구성/미구성을 확정/예정으로 매핑
             let mappedStatus = status?.trim() || "확정";
             if (mappedStatus === "구성") mappedStatus = "확정";
             if (mappedStatus === "미구성") mappedStatus = "예정";
-            (extracted as any)[`team_${teamIndex}_status`] = mappedStatus as TeamStatus;
+            (extracted as any)[`team_${teamIndex}_status`] =
+                mappedStatus as TeamStatus;
             teamIndex++;
         }
     }
-    
+
     // HTML 테이블에서도 추출 시도 (에디터가 HTML로 렌더링하는 경우)
     // <td>팀원1</td><td>CTO</td><td>담당업무</td><td>역량</td><td>확정</td>
     if (teamIndex === 1) {
         // 마크다운 추출 실패 시 HTML 패턴 시도
-        const htmlTeamRegex = /<td[^>]*>\s*(팀원\d+|팀원 ?\d+)\s*<\/td>\s*<td[^>]*>\s*([^<]+)\s*<\/td>\s*<td[^>]*>\s*([^<]+)\s*<\/td>\s*<td[^>]*>\s*([^<]+)\s*<\/td>\s*<td[^>]*>\s*(확정|예정|구성|미구성)?\s*<\/td>/gi;
+        const htmlTeamRegex =
+            /<td[^>]*>\s*(팀원\d+|팀원 ?\d+)\s*<\/td>\s*<td[^>]*>\s*([^<]+)\s*<\/td>\s*<td[^>]*>\s*([^<]+)\s*<\/td>\s*<td[^>]*>\s*([^<]+)\s*<\/td>\s*<td[^>]*>\s*(확정|예정|구성|미구성)?\s*<\/td>/gi;
         let htmlMatch;
-        
-        while ((htmlMatch = htmlTeamRegex.exec(content)) !== null && teamIndex <= 5) {
+
+        while (
+            (htmlMatch = htmlTeamRegex.exec(content)) !== null &&
+            teamIndex <= 5
+        ) {
             const [, , position, role, competency, status] = htmlMatch;
-            (extracted as any)[`team_${teamIndex}_position`] = position?.trim() || "";
+            (extracted as any)[`team_${teamIndex}_position`] =
+                position?.trim() || "";
             (extracted as any)[`team_${teamIndex}_role`] = role?.trim() || "";
-            (extracted as any)[`team_${teamIndex}_competency`] = competency?.trim() || "";
+            (extracted as any)[`team_${teamIndex}_competency`] =
+                competency?.trim() || "";
             let mappedStatus = status?.trim() || "확정";
             if (mappedStatus === "구성") mappedStatus = "확정";
             if (mappedStatus === "미구성") mappedStatus = "예정";
-            (extracted as any)[`team_${teamIndex}_status`] = mappedStatus as TeamStatus;
+            (extracted as any)[`team_${teamIndex}_status`] =
+                mappedStatus as TeamStatus;
             teamIndex++;
         }
     }
@@ -451,7 +496,7 @@ const extractBusinessInfoFromContent = (
     console.log("[extractBusinessInfo] 팀 추출 결과:", {
         team_1_position: (extracted as any).team_1_position,
         team_2_position: (extracted as any).team_2_position,
-        teamIndex
+        teamIndex,
     });
 
     return extracted;
@@ -620,17 +665,19 @@ export const BusinessInfoPanel = forwardRef<
                     (editorContent.length >
                         lastContentLengthRef.current + 300 ||
                         editorContent.length > 1000);
-                
+
                 // 팀 정보는 4-2 표가 포함되어 있으면 항상 추출
-                const hasTeamTable = editorContent.includes("팀원1") || editorContent.includes("팀원 1");
+                const hasTeamTable =
+                    editorContent.includes("팀원1") ||
+                    editorContent.includes("팀원 1");
 
                 if (shouldExtractBasic || hasTeamTable) {
                     console.log("[BusinessInfoPanel] 추출 시도:", {
                         editorContentLength: editorContent.length,
                         hasTeamTable,
-                        shouldExtractBasic
+                        shouldExtractBasic,
                     });
-                    
+
                     const extracted =
                         extractBusinessInfoFromContent(editorContent);
                     if (Object.keys(extracted).length > 0) {
@@ -648,10 +695,12 @@ export const BusinessInfoPanel = forwardRef<
                                         extracted.info_reg_number;
                                 }
                                 if (extracted.info_est_date) {
-                                    updated.info_est_date = extracted.info_est_date;
+                                    updated.info_est_date =
+                                        extracted.info_est_date;
                                 }
                                 if (extracted.info_address) {
-                                    updated.info_address = extracted.info_address;
+                                    updated.info_address =
+                                        extracted.info_address;
                                 }
 
                                 // 창업아이템 정보 추출
@@ -662,37 +711,51 @@ export const BusinessInfoPanel = forwardRef<
                                     extracted.target_output &&
                                     !prev.target_output
                                 ) {
-                                    updated.target_output = extracted.target_output;
+                                    updated.target_output =
+                                        extracted.target_output;
                                 }
                                 if (extracted.support_field) {
-                                    updated.support_field = extracted.support_field;
+                                    updated.support_field =
+                                        extracted.support_field;
                                 }
                                 if (extracted.tech_field) {
                                     updated.tech_field = extracted.tech_field;
                                 }
                             }
-                            
+
                             // 팀 구성 현황 추출 (4-2 표에서) - 항상 추출
                             for (let i = 1; i <= 5; i++) {
-                                const posKey = `team_${i}_position` as keyof BusinessInfo;
-                                const roleKey = `team_${i}_role` as keyof BusinessInfo;
-                                const compKey = `team_${i}_competency` as keyof BusinessInfo;
-                                const statusKey = `team_${i}_status` as keyof BusinessInfo;
-                                
+                                const posKey =
+                                    `team_${i}_position` as keyof BusinessInfo;
+                                const roleKey =
+                                    `team_${i}_role` as keyof BusinessInfo;
+                                const compKey =
+                                    `team_${i}_competency` as keyof BusinessInfo;
+                                const statusKey =
+                                    `team_${i}_status` as keyof BusinessInfo;
+
                                 if ((extracted as any)[posKey]) {
-                                    (updated as any)[posKey] = (extracted as any)[posKey];
+                                    (updated as any)[posKey] = (
+                                        extracted as any
+                                    )[posKey];
                                 }
                                 if ((extracted as any)[roleKey]) {
-                                    (updated as any)[roleKey] = (extracted as any)[roleKey];
+                                    (updated as any)[roleKey] = (
+                                        extracted as any
+                                    )[roleKey];
                                 }
                                 if ((extracted as any)[compKey]) {
-                                    (updated as any)[compKey] = (extracted as any)[compKey];
+                                    (updated as any)[compKey] = (
+                                        extracted as any
+                                    )[compKey];
                                 }
                                 if ((extracted as any)[statusKey]) {
-                                    (updated as any)[statusKey] = (extracted as any)[statusKey];
+                                    (updated as any)[statusKey] = (
+                                        extracted as any
+                                    )[statusKey];
                                 }
                             }
-                            
+
                             return updated;
                         });
                         lastContentLengthRef.current = editorContent.length;
