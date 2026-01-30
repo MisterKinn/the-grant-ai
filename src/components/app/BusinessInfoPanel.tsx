@@ -657,9 +657,9 @@ export const BusinessInfoPanel = forwardRef<
 
         // Auto-extract from editor content when it changes substantially
         useEffect(() => {
-            // 팀 구성 정보는 항상 추출 시도 (4-2 표가 문서 끝에 있으므로)
+            // 팀 구성 정보와 예산 정보는 항상 추출 시도
             if (editorContent && editorContent.length > 200) {
-                // 기본 정보는 처음 한 번만, 팀 정보는 항상 추출
+                // 기본 정보는 처음 한 번만
                 const shouldExtractBasic =
                     !hasExtracted &&
                     (editorContent.length >
@@ -671,10 +671,16 @@ export const BusinessInfoPanel = forwardRef<
                     editorContent.includes("팀원1") ||
                     editorContent.includes("팀원 1");
 
-                if (shouldExtractBasic || hasTeamTable) {
+                // 예산 정보는 합 계 행이 포함되어 있으면 항상 추출
+                const hasBudgetTable =
+                    editorContent.includes("합 계") ||
+                    editorContent.includes("합계");
+
+                if (shouldExtractBasic || hasTeamTable || hasBudgetTable) {
                     console.log("[BusinessInfoPanel] 추출 시도:", {
                         editorContentLength: editorContent.length,
                         hasTeamTable,
+                        hasBudgetTable,
                         shouldExtractBasic,
                     });
 
@@ -754,6 +760,20 @@ export const BusinessInfoPanel = forwardRef<
                                         extracted as any
                                     )[statusKey];
                                 }
+                            }
+
+                            // 2-3 정부지원사업비 합계 추출 - 항상 추출
+                            if (extracted.budget_gov) {
+                                updated.budget_gov = extracted.budget_gov;
+                            }
+                            if (extracted.budget_self_cash) {
+                                updated.budget_self_cash = extracted.budget_self_cash;
+                            }
+                            if (extracted.budget_self_kind) {
+                                updated.budget_self_kind = extracted.budget_self_kind;
+                            }
+                            if (extracted.budget_total) {
+                                updated.budget_total = extracted.budget_total;
                             }
 
                             return updated;
