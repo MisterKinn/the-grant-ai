@@ -407,15 +407,15 @@ const extractBusinessInfoFromContent = (
 
     // ========== 4-2 팀 구성(안) 표에서 팀원 정보 추출 ==========
     // 마크다운 표 형식: | 팀원1 | CTO | AI 알고리즘 개발 | 20년 경력 | 확정 |
-    const teamTableRegex = /\|\s*(팀원\d+|대표자)\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|\s*(확정|예정|구성|미구성)?\s*\|/gi;
+    const teamTableRegex = /\|\s*(팀원\d+|팀원 ?\d+)\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|\s*(확정|예정|구성|미구성)?\s*\|/gi;
     let teamMatch;
     let teamIndex = 1;
     
     while ((teamMatch = teamTableRegex.exec(cleanContent)) !== null && teamIndex <= 5) {
         const [, memberType, position, role, competency, status] = teamMatch;
         
-        // 대표자는 건너뛰고 팀원만 추출 (팀 구성 현황은 대표자 본인 제외)
-        if (memberType && memberType.includes("팀원")) {
+        // 팀원만 추출 (대표자 본인 제외)
+        if (memberType) {
             (extracted as any)[`team_${teamIndex}_position`] = position?.trim() || "";
             (extracted as any)[`team_${teamIndex}_role`] = role?.trim() || "";
             (extracted as any)[`team_${teamIndex}_competency`] = competency?.trim() || "";
@@ -427,6 +427,32 @@ const extractBusinessInfoFromContent = (
             teamIndex++;
         }
     }
+    
+    // HTML 테이블에서도 추출 시도 (에디터가 HTML로 렌더링하는 경우)
+    // <td>팀원1</td><td>CTO</td><td>담당업무</td><td>역량</td><td>확정</td>
+    if (teamIndex === 1) {
+        // 마크다운 추출 실패 시 HTML 패턴 시도
+        const htmlTeamRegex = /<td[^>]*>\s*(팀원\d+|팀원 ?\d+)\s*<\/td>\s*<td[^>]*>\s*([^<]+)\s*<\/td>\s*<td[^>]*>\s*([^<]+)\s*<\/td>\s*<td[^>]*>\s*([^<]+)\s*<\/td>\s*<td[^>]*>\s*(확정|예정|구성|미구성)?\s*<\/td>/gi;
+        let htmlMatch;
+        
+        while ((htmlMatch = htmlTeamRegex.exec(content)) !== null && teamIndex <= 5) {
+            const [, , position, role, competency, status] = htmlMatch;
+            (extracted as any)[`team_${teamIndex}_position`] = position?.trim() || "";
+            (extracted as any)[`team_${teamIndex}_role`] = role?.trim() || "";
+            (extracted as any)[`team_${teamIndex}_competency`] = competency?.trim() || "";
+            let mappedStatus = status?.trim() || "확정";
+            if (mappedStatus === "구성") mappedStatus = "확정";
+            if (mappedStatus === "미구성") mappedStatus = "예정";
+            (extracted as any)[`team_${teamIndex}_status`] = mappedStatus as TeamStatus;
+            teamIndex++;
+        }
+    }
+
+    console.log("[extractBusinessInfo] 팀 추출 결과:", {
+        team_1_position: (extracted as any).team_1_position,
+        team_2_position: (extracted as any).team_2_position,
+        teamIndex
+    });
 
     return extracted;
 };
@@ -633,6 +659,28 @@ export const BusinessInfoPanel = forwardRef<
                             if (extracted.tech_field) {
                                 updated.tech_field = extracted.tech_field;
                             }
+                            
+                            // 팀 구성 현황 추출 (4-2 표에서)
+                            for (let i = 1; i <= 5; i++) {
+                                const posKey = `team_${i}_position` as keyof BusinessInfo;
+                                const roleKey = `team_${i}_role` as keyof BusinessInfo;
+                                const compKey = `team_${i}_competency` as keyof BusinessInfo;
+                                const statusKey = `team_${i}_status` as keyof BusinessInfo;
+                                
+                                if ((extracted as any)[posKey]) {
+                                    (updated as any)[posKey] = (extracted as any)[posKey];
+                                }
+                                if ((extracted as any)[roleKey]) {
+                                    (updated as any)[roleKey] = (extracted as any)[roleKey];
+                                }
+                                if ((extracted as any)[compKey]) {
+                                    (updated as any)[compKey] = (extracted as any)[compKey];
+                                }
+                                if ((extracted as any)[statusKey]) {
+                                    (updated as any)[statusKey] = (extracted as any)[statusKey];
+                                }
+                            }
+                            
                             return updated;
                         });
                         lastContentLengthRef.current = editorContent.length;
