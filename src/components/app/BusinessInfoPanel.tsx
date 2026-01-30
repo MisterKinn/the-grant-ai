@@ -1368,6 +1368,7 @@ export const BusinessInfoPanel = forwardRef<
                                             )
                                         }
                                         className={inputClass}
+                                        placeholder="예: CTO"
                                     />
                                 </td>
                                 <td className={valueCellClass}>
@@ -1377,6 +1378,7 @@ export const BusinessInfoPanel = forwardRef<
                                                 `team_${num}_role`
                                             ]
                                         }
+                                        placeholder="예: 기술 개발"
                                         onChange={(e) =>
                                             updateField(
                                                 `team_${num}_role` as keyof BusinessInfo,
@@ -1400,6 +1402,7 @@ export const BusinessInfoPanel = forwardRef<
                                             )
                                         }
                                         className={inputClass}
+                                        placeholder="예: AI 전문가, 10년 경력"
                                     />
                                 </td>
                                 <td className={valueCellClass}>
