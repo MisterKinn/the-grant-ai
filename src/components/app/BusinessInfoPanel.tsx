@@ -691,7 +691,7 @@ export const BusinessInfoPanel = forwardRef<
                                         )
                                     }
                                     className={inputClass}
-                                    placeholder="AI가 자동 생성"
+                                    placeholder="예: (주)그랜트AI"
                                 />
                             </td>
                             <td
@@ -822,7 +822,7 @@ export const BusinessInfoPanel = forwardRef<
                                         )
                                     }
                                     className={inputClass}
-                                    placeholder="AI가 자동 생성"
+                                    placeholder="예: 서울특별시 강남구"
                                 />
                             </td>
                         </tr>
@@ -849,7 +849,7 @@ export const BusinessInfoPanel = forwardRef<
                                         updateField("item_name", e.target.value)
                                     }
                                     className={inputClass}
-                                    placeholder="AI가 자동 생성"
+                                    placeholder="예: AI 기반 사업계획서 자동 작성 솔루션"
                                 />
                             </td>
                         </tr>
@@ -871,7 +871,7 @@ export const BusinessInfoPanel = forwardRef<
                                         )
                                     }
                                     className={inputClass}
-                                    placeholder="AI가 자동 생성"
+                                    placeholder="예: AI 사업계획서 자동 작성 플랫폼"
                                 />
                             </td>
                         </tr>
