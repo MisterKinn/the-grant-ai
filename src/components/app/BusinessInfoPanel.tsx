@@ -37,7 +37,7 @@ type RegionField =
     | "지방우대 비해당 지역";
 
 // Team member status
-type TeamStatus = "구성" | "미구성" | "";
+type TeamStatus = "확정" | "예정" | "";
 
 export interface BusinessInfo {
     // 일반현황 (General Info)
@@ -405,6 +405,29 @@ const extractBusinessInfoFromContent = (
         extracted.target_output = extracted.item_name;
     }
 
+    // ========== 4-2 팀 구성(안) 표에서 팀원 정보 추출 ==========
+    // 마크다운 표 형식: | 팀원1 | CTO | AI 알고리즘 개발 | 20년 경력 | 확정 |
+    const teamTableRegex = /\|\s*(팀원\d+|대표자)\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|\s*(확정|예정|구성|미구성)?\s*\|/gi;
+    let teamMatch;
+    let teamIndex = 1;
+    
+    while ((teamMatch = teamTableRegex.exec(cleanContent)) !== null && teamIndex <= 5) {
+        const [, memberType, position, role, competency, status] = teamMatch;
+        
+        // 대표자는 건너뛰고 팀원만 추출 (팀 구성 현황은 대표자 본인 제외)
+        if (memberType && memberType.includes("팀원")) {
+            (extracted as any)[`team_${teamIndex}_position`] = position?.trim() || "";
+            (extracted as any)[`team_${teamIndex}_role`] = role?.trim() || "";
+            (extracted as any)[`team_${teamIndex}_competency`] = competency?.trim() || "";
+            // 구성/미구성을 확정/예정으로 매핑
+            let mappedStatus = status?.trim() || "확정";
+            if (mappedStatus === "구성") mappedStatus = "확정";
+            if (mappedStatus === "미구성") mappedStatus = "예정";
+            (extracted as any)[`team_${teamIndex}_status`] = mappedStatus as TeamStatus;
+            teamIndex++;
+        }
+    }
+
     return extracted;
 };
 
@@ -512,11 +535,11 @@ export const BusinessInfoPanel = forwardRef<
                 budget_etc_amount: 0,
                 // 지방우대 지역 - 기본 선택 없음
                 region_type: "",
-                // 팀 구성 현황 - 기본 1명
-                team_1_position: "개발팀장",
-                team_1_role: "서비스 개발 총괄",
-                team_1_competency: "SW 개발 경력 5년",
-                team_1_status: "구성",
+                // 팀 구성 현황 - AI가 채울 빈 값
+                team_1_position: "",
+                team_1_role: "",
+                team_1_competency: "",
+                team_1_status: "",
             }),
         );
         const [hasExtracted, setHasExtracted] = useState(false);
@@ -1337,11 +1360,11 @@ export const BusinessInfoPanel = forwardRef<
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="구성">
-                                                구성
+                                            <SelectItem value="확정">
+                                                확정
                                             </SelectItem>
-                                            <SelectItem value="미구성">
-                                                미구성
+                                            <SelectItem value="예정">
+                                                예정
                                             </SelectItem>
                                         </SelectContent>
                                     </Select>
