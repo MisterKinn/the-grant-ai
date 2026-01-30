@@ -10,11 +10,13 @@ import NotFound from "./pages/NotFound";
 import AppLayout from "./pages/AppLayout";
 import DocumentEditor from "./pages/DocumentEditor";
 import HwpxTestPage from "./pages/HwpxTestPage";
+import { Analytics } from "@vercel/analytics/next";
 
 const queryClient = new QueryClient();
 
 const App = () => (
     <HelmetProvider>
+        <Analytics />
         <QueryClientProvider client={queryClient}>
             <TooltipProvider>
                 <Toaster />
