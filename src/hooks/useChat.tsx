@@ -149,12 +149,25 @@ export function useChat(
         async (content: string) => {
             if (!content.trim() || isLoading) return;
 
-            // 🔥 grantType에 따른 예산 표 형식 지시 추가 (Edge Function 수정 불가 시 프론트엔드에서 처리)
-            let budgetInstruction = "";
+            // 🔥 grantType에 따른 지시 추가 (Edge Function 수정 불가 시 프론트엔드에서 처리)
+            let additionalInstruction = "";
             if (grantType === "EARLY_STARTUP") {
-                budgetInstruction = `
+                additionalInstruction = `
 
-[중요 지시 - 2-3 정부지원사업비 집행계획 표 형식]
+[중요 지시 1 - 일반현황 정보 추출]
+사용자가 제공한 정보에서 아래 필드를 추출하여 작성하세요. 정보가 없으면 합리적으로 추론하세요:
+- 기업명: {{info_company_name}}
+- 개업연월일: {{info_est_date}} (YYYY.MM.DD 형식)
+- 사업자등록번호: {{info_reg_number}} (000-00-00000 형식)
+- 사업자 소재지: {{info_address}}
+- 사업자 구분: 개인사업자 또는 법인사업자
+- 대표자 유형: 단독, 공동, 각자대표 중 하나
+- 창업아이템명: {{item_name}}
+- 산출물: {{target_output}}
+- 지원분야: 제조 또는 지식서비스
+- 전문기술분야: 기계·소재, 전기·전자, 정보·통신, 화공·섬유, 바이오·의료·생명, 에너지·자원, 공예·디자인 중 하나
+
+[중요 지시 2 - 2-3 정부지원사업비 집행계획 표 형식]
 반드시 아래 6열 단일 표 형식으로 작성하세요. 절대 1단계/2단계로 분리하지 마세요!
 금액은 반드시 "3,000,000" 형식으로 작성하세요. "3,000천원" 같은 형식은 절대 사용하지 마세요!
 
@@ -171,7 +184,7 @@ export function useChat(
 
 `;
             } else if (grantType === "PRE_STARTUP") {
-                budgetInstruction = `
+                additionalInstruction = `
 
 [중요 지시 - 2-3 정부지원사업비 집행계획 표 형식]
 반드시 1단계/2단계로 분리된 3열 표 형식으로 작성하세요.
@@ -192,7 +205,7 @@ export function useChat(
 `;
             }
 
-            const enhancedContent = budgetInstruction + content;
+            const enhancedContent = additionalInstruction + content;
             const userMsg: ChatMessage = { role: "user", content: enhancedContent };
             // UI에는 원본 메시지만 표시
             setMessages((prev) => [...prev, { role: "user", content }]);

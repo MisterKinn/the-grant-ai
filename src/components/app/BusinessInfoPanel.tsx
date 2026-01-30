@@ -475,49 +475,43 @@ export const BusinessInfoPanel = forwardRef<
         const [businessInfo, setBusinessInfoState] = useState<BusinessInfo>(
             () => ({
                 ...initialBusinessInfo,
-                // 일반현황 기본 정보 - 모든 필드 기본값 설정
-                info_company_name: defaultCompanyName || "(주)그랜트AI",
-                info_est_date: "2025.01.01",
-                info_reg_number: "000-00-00000",
-                info_address: "서울특별시 강남구",
+                // 일반현황 기본 정보 - AI가 채울 빈 값으로 초기화
+                info_company_name: defaultCompanyName || "",
+                info_est_date: "",
+                info_reg_number: "",
+                info_address: "",
                 business_type: "개인사업자",
                 representative_type: "단독",
-                // 창업아이템 정보
-                item_name: "AI 기반 사업계획서 자동 작성 솔루션",
-                target_output: "AI 기반 사업계획서 자동 작성 플랫폼",
-                // 지원 분야 및 기술 분야
-                support_field: "지식서비스",
-                tech_field: "정보·통신",
-                // 사업비 정보
-                budget_gov: "100백만원",
-                budget_self_cash: "10백만원",
-                budget_self_kind: "0",
-                budget_total: "110백만원",
-                // 정부지원사업비 총액 (1억원)
-                budget_gov_amount: 100000000,
-                // 사업비 집행 계획 (비목별)
-                budget_material_basis:
-                    "크롬북, 노트북 등 개발 환경 구축을 위한 장비 구매 (각 2대 × 1,000,000원)",
-                budget_material_amount: 3000000,
-                budget_personnel_basis:
-                    "AI 개발자 1인, 디자이너 1인 (각 3개월 인건비 × 2,000,000원)",
-                budget_personnel_amount: 50000000,
-                budget_outsourcing_basis:
-                    "데이터 라벨링 및 정제 외주 비용 (10,000건 × 1,000원)",
-                budget_outsourcing_amount: 20000000,
-                budget_advertising_basis:
-                    "베타 서비스 홍보 및 초기 사용자 모집을 위한 온라인 광고비",
-                budget_advertising_amount: 10000000,
-                budget_commission_basis: "법률, 회계 자문 및 특허 출원 수수료",
-                budget_commission_amount: 5000000,
-                budget_activity_basis:
-                    "워크숍 진행 및 전문가 멘토링 비용 (월 2회 × 500,000원)",
-                budget_activity_amount: 7000000,
-                budget_etc_basis:
-                    "클라우드 서버 운영 비용, 소프트웨어 라이선스 비용",
-                budget_etc_amount: 5000000,
-                // 지방우대 지역
-                region_type: "일반지역",
+                // 창업아이템 정보 - AI가 채울 빈 값
+                item_name: "",
+                target_output: "",
+                // 지원 분야 및 기술 분야 - 기본 선택 없음
+                support_field: "",
+                tech_field: "",
+                // 사업비 정보 - 기본값
+                budget_gov: "",
+                budget_self_cash: "",
+                budget_self_kind: "",
+                budget_total: "",
+                // 정부지원사업비 총액 (기본 0)
+                budget_gov_amount: 0,
+                // 사업비 집행 계획 (비목별) - 빈 값
+                budget_material_basis: "",
+                budget_material_amount: 0,
+                budget_personnel_basis: "",
+                budget_personnel_amount: 0,
+                budget_outsourcing_basis: "",
+                budget_outsourcing_amount: 0,
+                budget_advertising_basis: "",
+                budget_advertising_amount: 0,
+                budget_commission_basis: "",
+                budget_commission_amount: 0,
+                budget_activity_basis: "",
+                budget_activity_amount: 0,
+                budget_etc_basis: "",
+                budget_etc_amount: 0,
+                // 지방우대 지역 - 기본 선택 없음
+                region_type: "",
                 // 팀 구성 현황 - 기본 1명
                 team_1_position: "개발팀장",
                 team_1_role: "서비스 개발 총괄",
@@ -697,6 +691,7 @@ export const BusinessInfoPanel = forwardRef<
                                         )
                                     }
                                     className={inputClass}
+                                    placeholder="AI가 자동 생성"
                                 />
                             </td>
                             <td
@@ -723,6 +718,7 @@ export const BusinessInfoPanel = forwardRef<
                                         )
                                     }
                                     className={inputClass}
+                                    placeholder="YYYY.MM.DD"
                                 />
                             </td>
                         </tr>
@@ -807,6 +803,7 @@ export const BusinessInfoPanel = forwardRef<
                                         )
                                     }
                                     className={inputClass}
+                                    placeholder="000-00-00000"
                                 />
                             </td>
                             <td className={labelCellClass}>
@@ -825,6 +822,7 @@ export const BusinessInfoPanel = forwardRef<
                                         )
                                     }
                                     className={inputClass}
+                                    placeholder="AI가 자동 생성"
                                 />
                             </td>
                         </tr>
@@ -851,6 +849,7 @@ export const BusinessInfoPanel = forwardRef<
                                         updateField("item_name", e.target.value)
                                     }
                                     className={inputClass}
+                                    placeholder="AI가 자동 생성"
                                 />
                             </td>
                         </tr>
@@ -872,6 +871,7 @@ export const BusinessInfoPanel = forwardRef<
                                         )
                                     }
                                     className={inputClass}
+                                    placeholder="AI가 자동 생성"
                                 />
                             </td>
                         </tr>
