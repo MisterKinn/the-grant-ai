@@ -1207,6 +1207,196 @@ export const BusinessInfoPanel = forwardRef<
                     </tbody>
                 </table>
 
+                {/* 사업비 집행 계획 표 */}
+                <h2 className="text-xl font-bold mt-6 mb-4">사업비 집행 계획</h2>
+                <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                        정부지원사업비 총액 (원)
+                    </label>
+                    <Input
+                        type="number"
+                        value={businessInfo.budget_gov_amount}
+                        onChange={(e) =>
+                            updateField(
+                                "budget_gov_amount",
+                                Number(e.target.value),
+                            )
+                        }
+                        className="w-64"
+                        placeholder="100000000"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                        최대 1억원(100,000,000원). 지역에 따라 자기부담금이 자동 계산됩니다.
+                    </p>
+                </div>
+                <table className="w-full border-collapse mb-4">
+                    <thead>
+                        <tr>
+                            <td className={`${labelCellClass} text-center`} style={{ width: "12%" }}>비 목</td>
+                            <td className={`${labelCellClass} text-center`} style={{ width: "60%" }}>산 출 근 거</td>
+                            <td className={`${labelCellClass} text-center`} style={{ width: "28%" }}>정부지원사업비(원)</td>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {/* 재료비 */}
+                        <tr>
+                            <td className={`${labelCellClass} text-center`}>재료비</td>
+                            <td className={valueCellClass}>
+                                <Input
+                                    value={businessInfo.budget_material_basis}
+                                    onChange={(e) => updateField("budget_material_basis", e.target.value)}
+                                    className={inputClass}
+                                    placeholder="예: 개발 장비 구매 (노트북 2대 × 1,500,000원)"
+                                />
+                            </td>
+                            <td className={valueCellClass}>
+                                <Input
+                                    type="number"
+                                    value={businessInfo.budget_material_amount}
+                                    onChange={(e) => updateField("budget_material_amount", Number(e.target.value))}
+                                    className={inputClass}
+                                />
+                            </td>
+                        </tr>
+                        {/* 인건비 */}
+                        <tr>
+                            <td className={`${labelCellClass} text-center`}>인건비</td>
+                            <td className={valueCellClass}>
+                                <Input
+                                    value={businessInfo.budget_personnel_basis}
+                                    onChange={(e) => updateField("budget_personnel_basis", e.target.value)}
+                                    className={inputClass}
+                                    placeholder="예: 개발자 1인 × 6개월 × 월 2,500,000원"
+                                />
+                            </td>
+                            <td className={valueCellClass}>
+                                <Input
+                                    type="number"
+                                    value={businessInfo.budget_personnel_amount}
+                                    onChange={(e) => updateField("budget_personnel_amount", Number(e.target.value))}
+                                    className={inputClass}
+                                />
+                            </td>
+                        </tr>
+                        {/* 외주용역비 */}
+                        <tr>
+                            <td className={`${labelCellClass} text-center`}>외주용역비</td>
+                            <td className={valueCellClass}>
+                                <Input
+                                    value={businessInfo.budget_outsourcing_basis}
+                                    onChange={(e) => updateField("budget_outsourcing_basis", e.target.value)}
+                                    className={inputClass}
+                                    placeholder="예: 데이터 라벨링 외주 (10,000건 × 1,000원)"
+                                />
+                            </td>
+                            <td className={valueCellClass}>
+                                <Input
+                                    type="number"
+                                    value={businessInfo.budget_outsourcing_amount}
+                                    onChange={(e) => updateField("budget_outsourcing_amount", Number(e.target.value))}
+                                    className={inputClass}
+                                />
+                            </td>
+                        </tr>
+                        {/* 광고선전비 */}
+                        <tr>
+                            <td className={`${labelCellClass} text-center`}>광고선전비</td>
+                            <td className={valueCellClass}>
+                                <Input
+                                    value={businessInfo.budget_advertising_basis}
+                                    onChange={(e) => updateField("budget_advertising_basis", e.target.value)}
+                                    className={inputClass}
+                                    placeholder="예: 온라인 마케팅 광고비 (월 500,000원 × 6개월)"
+                                />
+                            </td>
+                            <td className={valueCellClass}>
+                                <Input
+                                    type="number"
+                                    value={businessInfo.budget_advertising_amount}
+                                    onChange={(e) => updateField("budget_advertising_amount", Number(e.target.value))}
+                                    className={inputClass}
+                                />
+                            </td>
+                        </tr>
+                        {/* 지급수수료 */}
+                        <tr>
+                            <td className={`${labelCellClass} text-center`}>지급수수료</td>
+                            <td className={valueCellClass}>
+                                <Input
+                                    value={businessInfo.budget_commission_basis}
+                                    onChange={(e) => updateField("budget_commission_basis", e.target.value)}
+                                    className={inputClass}
+                                    placeholder="예: 법률/회계 자문료, 특허 출원 수수료"
+                                />
+                            </td>
+                            <td className={valueCellClass}>
+                                <Input
+                                    type="number"
+                                    value={businessInfo.budget_commission_amount}
+                                    onChange={(e) => updateField("budget_commission_amount", Number(e.target.value))}
+                                    className={inputClass}
+                                />
+                            </td>
+                        </tr>
+                        {/* 창업활동비 */}
+                        <tr>
+                            <td className={`${labelCellClass} text-center`}>창업활동비</td>
+                            <td className={valueCellClass}>
+                                <Input
+                                    value={businessInfo.budget_activity_basis}
+                                    onChange={(e) => updateField("budget_activity_basis", e.target.value)}
+                                    className={inputClass}
+                                    placeholder="예: 전문가 멘토링 비용 (월 2회 × 500,000원)"
+                                />
+                            </td>
+                            <td className={valueCellClass}>
+                                <Input
+                                    type="number"
+                                    value={businessInfo.budget_activity_amount}
+                                    onChange={(e) => updateField("budget_activity_amount", Number(e.target.value))}
+                                    className={inputClass}
+                                />
+                            </td>
+                        </tr>
+                        {/* 기타 */}
+                        <tr>
+                            <td className={`${labelCellClass} text-center`}>기타</td>
+                            <td className={valueCellClass}>
+                                <Input
+                                    value={businessInfo.budget_etc_basis}
+                                    onChange={(e) => updateField("budget_etc_basis", e.target.value)}
+                                    className={inputClass}
+                                    placeholder="예: 클라우드 서버 운영비, 소프트웨어 라이선스"
+                                />
+                            </td>
+                            <td className={valueCellClass}>
+                                <Input
+                                    type="number"
+                                    value={businessInfo.budget_etc_amount}
+                                    onChange={(e) => updateField("budget_etc_amount", Number(e.target.value))}
+                                    className={inputClass}
+                                />
+                            </td>
+                        </tr>
+                        {/* 합계 */}
+                        <tr>
+                            <td className={`${labelCellClass} text-center font-bold`}>합계</td>
+                            <td className={`${labelCellClass} text-center`}></td>
+                            <td className={`${labelCellClass} text-right font-bold`}>
+                                {(
+                                    businessInfo.budget_material_amount +
+                                    businessInfo.budget_personnel_amount +
+                                    businessInfo.budget_outsourcing_amount +
+                                    businessInfo.budget_advertising_amount +
+                                    businessInfo.budget_commission_amount +
+                                    businessInfo.budget_activity_amount +
+                                    businessInfo.budget_etc_amount
+                                ).toLocaleString()}원
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
                 {/* Third Table: 팀 구성 현황 */}
                 <table className="w-full border-collapse">
                     <thead>

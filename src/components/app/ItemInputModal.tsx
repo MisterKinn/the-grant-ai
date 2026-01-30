@@ -30,10 +30,9 @@ interface GrantTypeOption {
 
 const GRANT_TYPE_OPTIONS: GrantTypeOption[] = [
   { value: "PRE_STARTUP", label: "2025 예비창업패키지" },
-  { value: "YOUTH_ACADEMY", label: "2025 청년창업사관학교" },
+  { value: "YOUTH_ACADEMY", label: "2025 청년창업사관학교", disabled: true },
   { value: "EARLY_STARTUP", label: "2026 초기창업패키지" },
-  { value: "STARTUP_CENTRAL", label: "2025 창업중심대학(예정)", disabled: true },
-  { value: "CUSTOM", label: "자유양식" },
+  { value: "CUSTOM", label: "자유양식", disabled: true },
 ];
 
 // Checklist item derived from placeholders
