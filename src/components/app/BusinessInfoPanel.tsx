@@ -394,6 +394,62 @@ const extractBusinessInfoFromContent = (
     // Set default region as 일반지역
     extracted.region_type = "일반지역";
 
+    // ========== 사업비 집행 계획 추출 (AI 생성 표에서) ==========
+    // 2-3 정부지원사업비 집행계획 표에서 비목별 데이터 추출
+    const budgetCategories = [
+        { name: "재료비", key: "material" },
+        { name: "인건비", key: "personnel" },
+        { name: "외주용역비", key: "outsourcing" },
+        { name: "광고선전비", key: "advertising" },
+        { name: "지급수수료", key: "commission" },
+        { name: "창업활동비", key: "activity" },
+        { name: "기타", key: "etc" },
+    ];
+
+    for (const { name, key } of budgetCategories) {
+        // 테이블 행 패턴: | 비목 | 산출근거/집행계획 | 금액 |
+        // 다양한 테이블 형식 지원
+        const patterns = [
+            // Markdown 테이블: | 재료비 | 산출근거 | 금액 |
+            new RegExp(`\\|\\s*${name}\\s*\\|\\s*([^|]+)\\s*\\|\\s*([0-9,]+)`, 'i'),
+            // HTML 테이블: <td>재료비</td><td>산출근거</td><td>금액</td>
+            new RegExp(`${name}[^<]*<\\/td>\\s*<td[^>]*>([^<]+)<\\/td>\\s*<td[^>]*>([0-9,]+)`, 'i'),
+            // 줄글 형식: 재료비: 산출근거, 금액원
+            new RegExp(`${name}\\s*[:：]\\s*([^,\\n]+)[,，]?\\s*([0-9,]+)\\s*원?`, 'i'),
+        ];
+
+        for (const pattern of patterns) {
+            const match = content.match(pattern);
+            if (match && match[1] && match[2]) {
+                const basis = match[1].trim().replace(/\*+/g, "").substring(0, 200);
+                const amount = parseInt(match[2].replace(/,/g, ""), 10);
+                
+                if (basis && !isNaN(amount) && amount > 0) {
+                    (extracted as any)[`budget_${key}_basis`] = basis;
+                    (extracted as any)[`budget_${key}_amount`] = amount;
+                    break;
+                }
+            }
+        }
+    }
+
+    // 정부지원사업비 총액 추출
+    const totalPatterns = [
+        /합\s*계[^0-9]*([0-9,]+)\s*원?/i,
+        /총[액계]\s*[:：]?\s*([0-9,]+)\s*원?/i,
+        /정부지원사업비\s*총액\s*[:：]?\s*([0-9,]+)/i,
+    ];
+    for (const pattern of totalPatterns) {
+        const match = cleanContent.match(pattern);
+        if (match && match[1]) {
+            const amount = parseInt(match[1].replace(/,/g, ""), 10);
+            if (!isNaN(amount) && amount > 1000000) {
+                extracted.budget_gov_amount = amount;
+                break;
+            }
+        }
+    }
+
     // Set default budget values for 2026 초기창업패키지 (typical values)
     extracted.budget_gov = "100백만원";
     extracted.budget_self_cash = "10백만원";
@@ -1243,62 +1299,188 @@ export const BusinessInfoPanel = forwardRef<
                     const getRegionRatios = (regionType: string) => {
                         switch (regionType) {
                             case "지방특별지원 지역":
-                                return { govRatio: 0.9, cashRatio: 0.1, physicalRatio: 0 };
+                                return {
+                                    govRatio: 0.9,
+                                    cashRatio: 0.1,
+                                    physicalRatio: 0,
+                                };
                             case "지방우대 지역":
-                                return { govRatio: 0.8, cashRatio: 0.1, physicalRatio: 0.1 };
+                                return {
+                                    govRatio: 0.8,
+                                    cashRatio: 0.1,
+                                    physicalRatio: 0.1,
+                                };
                             case "지방우대 일반 지역":
-                                return { govRatio: 0.75, cashRatio: 0.1, physicalRatio: 0.15 };
+                                return {
+                                    govRatio: 0.75,
+                                    cashRatio: 0.1,
+                                    physicalRatio: 0.15,
+                                };
                             case "지방우대 비해당 지역":
                             default:
-                                return { govRatio: 0.7, cashRatio: 0.1, physicalRatio: 0.2 };
+                                return {
+                                    govRatio: 0.7,
+                                    cashRatio: 0.1,
+                                    physicalRatio: 0.2,
+                                };
                         }
                     };
-                    const { govRatio, cashRatio, physicalRatio } = getRegionRatios(businessInfo.region_type);
+                    const { govRatio, cashRatio, physicalRatio } =
+                        getRegionRatios(businessInfo.region_type);
 
                     // 비목별 자기부담금 계산 (정부지원금 기준)
-                    const calcCash = (govAmount: number) => Math.round((govAmount / govRatio) * cashRatio);
-                    const calcPhysical = (govAmount: number) => Math.round((govAmount / govRatio) * physicalRatio);
-                    const calcTotal = (govAmount: number) => govAmount + calcCash(govAmount) + calcPhysical(govAmount);
+                    const calcCash = (govAmount: number) =>
+                        Math.round((govAmount / govRatio) * cashRatio);
+                    const calcPhysical = (govAmount: number) =>
+                        Math.round((govAmount / govRatio) * physicalRatio);
+                    const calcTotal = (govAmount: number) =>
+                        govAmount +
+                        calcCash(govAmount) +
+                        calcPhysical(govAmount);
 
                     // 비목별 금액
                     const budgetItems = [
-                        { key: "material", label: "재료비", basis: businessInfo.budget_material_basis, amount: businessInfo.budget_material_amount, placeholder: "예: 개발 장비 구매 (노트북 2대 × 1,500,000원)" },
-                        { key: "personnel", label: "인건비", basis: businessInfo.budget_personnel_basis, amount: businessInfo.budget_personnel_amount, placeholder: "예: 개발자 1인 × 6개월 × 월 2,500,000원" },
-                        { key: "outsourcing", label: "외주용역비", basis: businessInfo.budget_outsourcing_basis, amount: businessInfo.budget_outsourcing_amount, placeholder: "예: 데이터 라벨링 외주 (10,000건 × 1,000원)" },
-                        { key: "advertising", label: "광고선전비", basis: businessInfo.budget_advertising_basis, amount: businessInfo.budget_advertising_amount, placeholder: "예: 온라인 마케팅 광고비 (월 500,000원 × 6개월)" },
-                        { key: "commission", label: "지급수수료", basis: businessInfo.budget_commission_basis, amount: businessInfo.budget_commission_amount, placeholder: "예: 법률/회계 자문료, 특허 출원 수수료" },
-                        { key: "activity", label: "창업활동비", basis: businessInfo.budget_activity_basis, amount: businessInfo.budget_activity_amount, placeholder: "예: 전문가 멘토링 비용 (월 2회 × 500,000원)" },
-                        { key: "etc", label: "기타", basis: businessInfo.budget_etc_basis, amount: businessInfo.budget_etc_amount, placeholder: "예: 클라우드 서버 운영비, 소프트웨어 라이선스" },
+                        {
+                            key: "material",
+                            label: "재료비",
+                            basis: businessInfo.budget_material_basis,
+                            amount: businessInfo.budget_material_amount,
+                            placeholder:
+                                "예: 개발 장비 구매 (노트북 2대 × 1,500,000원)",
+                        },
+                        {
+                            key: "personnel",
+                            label: "인건비",
+                            basis: businessInfo.budget_personnel_basis,
+                            amount: businessInfo.budget_personnel_amount,
+                            placeholder:
+                                "예: 개발자 1인 × 6개월 × 월 2,500,000원",
+                        },
+                        {
+                            key: "outsourcing",
+                            label: "외주용역비",
+                            basis: businessInfo.budget_outsourcing_basis,
+                            amount: businessInfo.budget_outsourcing_amount,
+                            placeholder:
+                                "예: 데이터 라벨링 외주 (10,000건 × 1,000원)",
+                        },
+                        {
+                            key: "advertising",
+                            label: "광고선전비",
+                            basis: businessInfo.budget_advertising_basis,
+                            amount: businessInfo.budget_advertising_amount,
+                            placeholder:
+                                "예: 온라인 마케팅 광고비 (월 500,000원 × 6개월)",
+                        },
+                        {
+                            key: "commission",
+                            label: "지급수수료",
+                            basis: businessInfo.budget_commission_basis,
+                            amount: businessInfo.budget_commission_amount,
+                            placeholder:
+                                "예: 법률/회계 자문료, 특허 출원 수수료",
+                        },
+                        {
+                            key: "activity",
+                            label: "창업활동비",
+                            basis: businessInfo.budget_activity_basis,
+                            amount: businessInfo.budget_activity_amount,
+                            placeholder:
+                                "예: 전문가 멘토링 비용 (월 2회 × 500,000원)",
+                        },
+                        {
+                            key: "etc",
+                            label: "기타",
+                            basis: businessInfo.budget_etc_basis,
+                            amount: businessInfo.budget_etc_amount,
+                            placeholder:
+                                "예: 클라우드 서버 운영비, 소프트웨어 라이선스",
+                        },
                     ];
 
-                    const totalGov = budgetItems.reduce((sum, item) => sum + item.amount, 0);
-                    const totalCash = budgetItems.reduce((sum, item) => sum + calcCash(item.amount), 0);
-                    const totalPhysical = budgetItems.reduce((sum, item) => sum + calcPhysical(item.amount), 0);
+                    const totalGov = budgetItems.reduce(
+                        (sum, item) => sum + item.amount,
+                        0,
+                    );
+                    const totalCash = budgetItems.reduce(
+                        (sum, item) => sum + calcCash(item.amount),
+                        0,
+                    );
+                    const totalPhysical = budgetItems.reduce(
+                        (sum, item) => sum + calcPhysical(item.amount),
+                        0,
+                    );
                     const totalAll = totalGov + totalCash + totalPhysical;
 
                     return (
                         <table className="w-full border-collapse mb-4 text-sm">
                             <thead>
                                 <tr>
-                                    <td rowSpan={2} className={`${labelCellClass} text-center`} style={{ width: "8%" }}>비 목</td>
-                                    <td rowSpan={2} className={`${labelCellClass} text-center`} style={{ width: "32%" }}>집행 계획</td>
-                                    <td colSpan={4} className={`${labelCellClass} text-center`}>총사업비(원) (ⓐ+ⓑ)</td>
+                                    <td
+                                        rowSpan={2}
+                                        className={`${labelCellClass} text-center`}
+                                        style={{ width: "8%" }}
+                                    >
+                                        비 목
+                                    </td>
+                                    <td
+                                        rowSpan={2}
+                                        className={`${labelCellClass} text-center`}
+                                        style={{ width: "32%" }}
+                                    >
+                                        집행 계획
+                                    </td>
+                                    <td
+                                        colSpan={4}
+                                        className={`${labelCellClass} text-center`}
+                                    >
+                                        총사업비(원) (ⓐ+ⓑ)
+                                    </td>
                                 </tr>
                                 <tr>
-                                    <td className={`${labelCellClass} text-center`} style={{ width: "15%" }}>정부지원사업비(ⓐ)</td>
-                                    <td className={`${labelCellClass} text-center`} style={{ width: "15%" }}>현금</td>
-                                    <td className={`${labelCellClass} text-center`} style={{ width: "15%" }}>현물</td>
-                                    <td className={`${labelCellClass} text-center`} style={{ width: "15%" }}>합계(ⓐ+ⓑ)</td>
+                                    <td
+                                        className={`${labelCellClass} text-center`}
+                                        style={{ width: "15%" }}
+                                    >
+                                        정부지원사업비(ⓐ)
+                                    </td>
+                                    <td
+                                        className={`${labelCellClass} text-center`}
+                                        style={{ width: "15%" }}
+                                    >
+                                        현금
+                                    </td>
+                                    <td
+                                        className={`${labelCellClass} text-center`}
+                                        style={{ width: "15%" }}
+                                    >
+                                        현물
+                                    </td>
+                                    <td
+                                        className={`${labelCellClass} text-center`}
+                                        style={{ width: "15%" }}
+                                    >
+                                        합계(ⓐ+ⓑ)
+                                    </td>
                                 </tr>
                             </thead>
                             <tbody>
                                 {budgetItems.map((item) => (
                                     <tr key={item.key}>
-                                        <td className={`${labelCellClass} text-center`}>{item.label}</td>
+                                        <td
+                                            className={`${labelCellClass} text-center`}
+                                        >
+                                            {item.label}
+                                        </td>
                                         <td className={valueCellClass}>
                                             <Input
                                                 value={item.basis}
-                                                onChange={(e) => updateField(`budget_${item.key}_basis` as keyof BusinessInfo, e.target.value)}
+                                                onChange={(e) =>
+                                                    updateField(
+                                                        `budget_${item.key}_basis` as keyof BusinessInfo,
+                                                        e.target.value,
+                                                    )
+                                                }
                                                 className={inputClass}
                                                 placeholder={item.placeholder}
                                             />
@@ -1307,22 +1489,67 @@ export const BusinessInfoPanel = forwardRef<
                                             <Input
                                                 type="number"
                                                 value={item.amount}
-                                                onChange={(e) => updateField(`budget_${item.key}_amount` as keyof BusinessInfo, Number(e.target.value))}
+                                                onChange={(e) =>
+                                                    updateField(
+                                                        `budget_${item.key}_amount` as keyof BusinessInfo,
+                                                        Number(e.target.value),
+                                                    )
+                                                }
                                                 className={`${inputClass} text-right`}
                                             />
                                         </td>
-                                        <td className={`${valueCellClass} text-right`}>{calcCash(item.amount).toLocaleString()}</td>
-                                        <td className={`${valueCellClass} text-right`}>{calcPhysical(item.amount).toLocaleString()}</td>
-                                        <td className={`${valueCellClass} text-right`}>{calcTotal(item.amount).toLocaleString()}</td>
+                                        <td
+                                            className={`${valueCellClass} text-right`}
+                                        >
+                                            {calcCash(
+                                                item.amount,
+                                            ).toLocaleString()}
+                                        </td>
+                                        <td
+                                            className={`${valueCellClass} text-right`}
+                                        >
+                                            {calcPhysical(
+                                                item.amount,
+                                            ).toLocaleString()}
+                                        </td>
+                                        <td
+                                            className={`${valueCellClass} text-right`}
+                                        >
+                                            {calcTotal(
+                                                item.amount,
+                                            ).toLocaleString()}
+                                        </td>
                                     </tr>
                                 ))}
                                 <tr>
-                                    <td className={`${labelCellClass} text-center font-bold`}>합 계</td>
-                                    <td className={`${labelCellClass} text-center`}></td>
-                                    <td className={`${labelCellClass} text-right font-bold`}>{totalGov.toLocaleString()}</td>
-                                    <td className={`${labelCellClass} text-right font-bold`}>{totalCash.toLocaleString()}</td>
-                                    <td className={`${labelCellClass} text-right font-bold`}>{totalPhysical.toLocaleString()}</td>
-                                    <td className={`${labelCellClass} text-right font-bold`}>{totalAll.toLocaleString()}</td>
+                                    <td
+                                        className={`${labelCellClass} text-center font-bold`}
+                                    >
+                                        합 계
+                                    </td>
+                                    <td
+                                        className={`${labelCellClass} text-center`}
+                                    ></td>
+                                    <td
+                                        className={`${labelCellClass} text-right font-bold`}
+                                    >
+                                        {totalGov.toLocaleString()}
+                                    </td>
+                                    <td
+                                        className={`${labelCellClass} text-right font-bold`}
+                                    >
+                                        {totalCash.toLocaleString()}
+                                    </td>
+                                    <td
+                                        className={`${labelCellClass} text-right font-bold`}
+                                    >
+                                        {totalPhysical.toLocaleString()}
+                                    </td>
+                                    <td
+                                        className={`${labelCellClass} text-right font-bold`}
+                                    >
+                                        {totalAll.toLocaleString()}
+                                    </td>
                                 </tr>
                             </tbody>
                         </table>
