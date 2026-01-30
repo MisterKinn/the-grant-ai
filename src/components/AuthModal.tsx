@@ -102,8 +102,13 @@ const AuthModal = ({ isOpen, onClose, mode, setMode, selectedPlan }: AuthModalPr
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
     try {
-      // 로그인 후 /app으로 리다이렉트
-      const redirectUrl = `${window.location.origin}/app`;
+      // 로그인 후 /app으로 리다이렉트 - 항상 HTTPS 사용
+      let origin = window.location.origin;
+      // http를 https로 강제 변환
+      if (origin.startsWith('http://')) {
+        origin = origin.replace('http://', 'https://');
+      }
+      const redirectUrl = `${origin}/app`;
       
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
