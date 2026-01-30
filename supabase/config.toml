@@ -1,0 +1,43 @@
+project_id = "kiklpgqskonasvspympj"
+
+[functions.chat]
+verify_jwt = true
+
+[functions.generate-plan]
+verify_jwt = true
+
+[functions.verify-payment]
+verify_jwt = true
+
+[functions.export-hwpx]
+verify_jwt = false
+
+[functions.validate-coupon]
+verify_jwt = true
+
+[functions.process-payment]
+verify_jwt = true
+
+[functions.process-vbank]
+verify_jwt = true
+
+[functions.portone-webhook]
+verify_jwt = false
+
+[functions.register-billing]
+verify_jwt = false
+
+[functions.process-subscription-renewal]
+verify_jwt = false
+
+[functions.cancel-subscription]
+verify_jwt = false
+
+[functions.parse-hwpx]
+verify_jwt = false
+
+[functions.export-custom-hwpx]
+verify_jwt = false
+
+[functions.parse-pdf]
+verify_jwt = true
